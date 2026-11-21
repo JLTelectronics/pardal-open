@@ -23,7 +23,6 @@ An honest overview: what works, what's coming, and where help is welcome (🙋).
 - Data sources outside the Netherlands (Belgium, Germany). 🙋
 - VoLTE on the DASH01 (calling isn't required, but the network asks for it more and more often).
 - Self-hostable server with a simple `docker compose` guide.
-- F-Droid.
 
 ## Known issues
 - DASH01: surfaceflinger once used a lot of memory. This is now monitored and handled with a clean

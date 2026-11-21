@@ -13,8 +13,8 @@ Contributions are welcome on three fronts.
 
 Issues labelled **good first issue** are small and well scoped: a nice place to start.
 
-> The **app source code** (iOS + Android) is still closed for now and will be opened up later. Until then,
-> app ideas (features, Android Auto, translations) go through Issues/Discussions.
+> The Pardal **apps** (iOS + Android) are not open source. App ideas (features, Android Auto, translations)
+> are welcome through Issues/Discussions.
 
 ## Ground rules
 - **No Flitsmeister code, APIs, data or firmware.** Not even "just for comparison". Pardal is independent.
@@ -30,7 +30,8 @@ Issues labelled **good first issue** are small and well scoped: a nice place to 
 3. Server: the code in `server/app/` runs with `docker compose up -d --build`.
 
 ## Licence
-By contributing you agree that your contribution falls under the **GPLv3**.
+By contributing you agree that your contribution falls under the licence of the folder you contribute to:
+**AGPLv3** for `server/`, **CERN-OHL-S-2.0** for `hardware/`, and **GPLv3** for everything else.
 
 ## Questions
 Ask them in **GitHub Discussions**. Do not report security issues in a public issue, but privately to the maintainer (see the GitHub profile).

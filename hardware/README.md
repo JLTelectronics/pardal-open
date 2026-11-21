@@ -43,3 +43,8 @@ Datasheets of the modules (Radxa, Quectel, …) are not included: download them 
 - Debug UART and reset on test points.
 
 See also [docs/BOOTLOADER.md](../docs/BOOTLOADER.md).
+
+## Licence
+The hardware design is licensed under the [CERN Open Hardware Licence v2 – Strongly Reciprocal](LICENSE)
+(CERN-OHL-S-2.0). Source location: <https://github.com/JLTelectronics/pardal-open/tree/main/hardware>.
+The scripts in `pcb/tools/` are part of the design source. The Pardal name and logo are not covered by this licence.

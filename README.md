@@ -7,7 +7,7 @@
 
 [![App Store](https://img.shields.io/badge/App_Store-Download-FF7A1A?style=for-the-badge&logo=apple&logoColor=white)](https://apps.apple.com/nl/app/pardal/id6836411492)
 [![Discord](https://img.shields.io/badge/Discord-Community-FF7A1A?style=for-the-badge&logo=discord&logoColor=white)](https://discord.gg/HdaQD6NHMN)
-[![License](https://img.shields.io/badge/license-GPLv3-FF7A1A?style=for-the-badge)](LICENSE)
+[![License](https://img.shields.io/badge/license-GPLv3_%C2%B7_AGPLv3_%C2%B7_CERN--OHL--S-FF7A1A?style=for-the-badge)](#independence-trademarks--licence)
 
 ![CarPlay](https://img.shields.io/badge/CarPlay-supported-111?logo=apple&logoColor=white)
 ![Platform](https://img.shields.io/badge/iOS_·_Android_(soon)-111)
@@ -74,11 +74,11 @@ Full description: **[docs/FUNCTIES.md](docs/FUNCTIES.md)**.
 | Platform | Status | |
 |---|---|---|
 | **iPhone** | ✅ Available, including **CarPlay** | [**Download on the App Store →**](https://apps.apple.com/nl/app/pardal/id6836411492) |
-| **Android** | 🚧 On the way | Coming to Google Play / F-Droid |
+| **Android** | 🚧 On the way | Coming to Google Play |
 | **Dedicated car display** | 🚧 Open hardware in development | See [`hardware/`](hardware) and [the end of this page](#running-pardal-on-a-dash01) |
 
-> The **app source code** (iOS + Android) will be opened up later. This repository currently
-> contains the **server**, the open **hardware** and the **DASH boot system**.
+> The Pardal **apps** (iOS, Android) are proprietary and not part of this repository. This repository
+> contains the open **server**, **hardware** and **DASH boot system**.
 
 ## Privacy
 
@@ -178,4 +178,15 @@ Installing Pardal on a device you own is your own choice and at your own risk: i
 warranty, and the original software and services will not work while Pardal is installed.
 The software is provided **without any warranty**, as described in the licence.
 
-This repository is licensed under the **[GNU GPLv3](LICENSE)**.
+### Licences
+
+| Part | Licence |
+|---|---|
+| [`server/`](server) | [GNU AGPLv3](server/LICENSE) — if you run a modified version as a public service, you must share its source code. |
+| [`hardware/`](hardware) | [CERN-OHL-S-2.0](hardware/LICENSE) — modified designs you make or distribute must be published under the same licence. |
+| Everything else ([`dash-pure/`](dash-pure), [`docs/`](docs), ...) | [GNU GPLv3](LICENSE) |
+
+Third-party components keep their own licences (see e.g. [`server/app/static/vendor/LICENSES.txt`](server/app/static/vendor/LICENSES.txt)).
+
+The **Pardal name and logo** are not covered by these licences. You may not use them for your own
+version or product without permission.

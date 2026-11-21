@@ -52,3 +52,7 @@ MapLibre GL Leaflet in `app/static/vendor/` — see [`LICENSES.txt`](app/static/
 Device IDs are random and stored hashed, positions for the online counter are rounded to ~1 km and kept in
 memory only, and IP addresses are only stored hashed with a secret salt. See
 [docs/play/privacyverklaring.md](../docs/play/privacyverklaring.md).
+
+## Licence
+The server is licensed under the [GNU AGPLv3](LICENSE). If you run a modified version as a service that
+others can use, you must make your modified source code available to them.

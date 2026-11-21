@@ -85,3 +85,6 @@ This file is ignored by git.
 | Wi-Fi does not turn on | `dmesg \| grep WMT`; check `wifi.conf`. |
 | Not charging | `/tmp/laden.log` on the device. |
 | Screen does not wake on touch | `ps \| grep wekker`, `/tmp/wekker.log`. |
+
+## Licence
+DASH-PURE is licensed under the [GNU GPLv3](../LICENSE).

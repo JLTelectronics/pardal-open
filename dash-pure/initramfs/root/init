@@ -1,0 +1,37 @@
+#!/bin/busybox sh
+export PATH=/bin:/sbin
+BB=/bin/busybox
+$BB mkdir -p /proc /sys /dev /tmp /mnt /config
+$BB mount -t proc proc /proc 2>/dev/null
+$BB mount -t sysfs sysfs /sys 2>/dev/null
+$BB mount -t devtmpfs devtmpfs /dev 2>/dev/null
+$BB mount -t configfs none /config 2>/dev/null
+$BB --install -s /bin
+$BB mdev -s 2>/dev/null
+$BB rm -f /dev/graphics/fb0 2>/dev/null
+echo 8 > /proc/sys/kernel/printk 2>/dev/null
+for w in /dev/watchdog /dev/watchdog0; do
+  [ -e "$w" ] && ( while true; do $BB printf '1' > "$w" 2>/dev/null; $BB sleep 2; done ) &
+done
+BLP=/sys/class/leds/lcd-backlight/brightness
+[ -e "$BLP" ] && { M=$($BB cat /sys/class/leds/lcd-backlight/max_brightness 2>/dev/null);[ -z "$M" ]&&M=255; echo "$M">"$BLP" 2>/dev/null; }
+( G=/config/usb_gadget/g1
+  $BB mkdir -p $G/strings/0x409 $G/configs/c.1/strings/0x409
+  echo 0x18d1 > $G/idVendor; echo 0x4ee7 > $G/idProduct
+  echo DP > $G/strings/0x409/manufacturer; echo DASH-PURE-NET > $G/strings/0x409/product; echo 0007 > $G/strings/0x409/serialnumber
+  echo net > $G/configs/c.1/strings/0x409/configuration
+  FN=ecm.0; $BB mkdir -p $G/functions/$FN 2>/dev/null
+  echo "02:11:22:33:44:55" > $G/functions/$FN/dev_addr 2>/dev/null
+  echo "02:11:22:33:44:66" > $G/functions/$FN/host_addr 2>/dev/null
+  $BB ln -s $G/functions/$FN $G/configs/c.1/ 2>/dev/null
+  echo "$($BB ls /sys/class/udc|$BB head -1)" > $G/UDC 2>/dev/null
+  for rs in /sys/class/usb_role/*/role; do echo device > "$rs" 2>/dev/null; done
+  $BB sleep 2
+  for rs in /sys/class/usb_role/*/role; do echo device > "$rs" 2>/dev/null; done
+  for n in /sys/class/net/*; do nm=$($BB basename "$n"); [ "$nm" = "lo" ] && continue; IFC="$nm"; done
+  $BB ifconfig "$IFC" 10.0.0.1 netmask 255.255.255.0 up 2>/dev/null
+  ( while true; do $BB telnetd -F -l /bin/sh -p 23 2>/dev/null; $BB sleep 1; done ) &
+  ( while true; do $BB nc -lp 2323 -e /bin/sh 2>/dev/null; $BB sleep 1; done ) &
+) &
+for i in 1 2 3 4 5 6 7 8 9 10; do [ -e /dev/input/event2 ] && break; $BB mdev -s 2>/dev/null; $BB sleep 1; done
+while true; do /bin/ui 2>/dev/kmsg; $BB sleep 1; done

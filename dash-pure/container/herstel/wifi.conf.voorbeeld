@@ -1,0 +1,8 @@
+# Eigen wifi voor de DASH (optioneel). Kopieer naar 'wifi.conf' in deze map
+# VOORDAT je installeert; dan verbindt de DASH thuis automatisch om de kaart en
+# flitserdata op te halen. Laat je dit weg, dan stel je je netwerk gewoon zelf in
+# via de Instellingen-app op de DASH.
+#
+# wifi.conf staat in .gitignore en wordt NOOIT meegepubliceerd.
+SSID=<netwerknaam>
+PSK=<wachtwoord>

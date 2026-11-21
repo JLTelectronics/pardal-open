@@ -1,0 +1,458 @@
+(kicad_sch
+	(version 20250114)
+	(generator "pardal_gen_sch")
+	(generator_version "9.0")
+	(uuid "60a40261-549a-50bf-b741-ec61c524542c")
+	(paper "A3")
+	(title_block
+		(title "Pardal Dash rev B - hoofdschema")
+		(company "Pardal")
+	)
+	(lib_symbols)
+	(sheet
+		(at 25.4 230)
+		(size 100 40)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(fields_autoplaced yes)
+		(stroke
+			(width 0.3)
+			(type solid)
+		)
+		(fill
+			(color 255 255 225 1.0)
+		)
+		(uuid "9c10513b-6798-5e02-a840-d32a26507c5d")
+		(property "Sheetname" "RADXA CM3 (RK3566) – ANDROID"
+			(at 25.4 229.3 0)
+			(effects
+				(font
+					(size 1.5 1.5)
+				)
+				(justify left bottom)
+			)
+		)
+		(property "Sheetfile" "cm3.kicad_sch"
+			(at 25.4 270.6 0)
+			(effects
+				(font
+					(size 1.1 1.1)
+				)
+				(justify left top)
+			)
+		)
+		(instances
+			(project "pardal"
+				(path "/60a40261-549a-50bf-b741-ec61c524542c"
+					(page "2")
+				)
+			)
+		)
+	)
+	(sheet
+		(at 145.4 230)
+		(size 100 40)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(fields_autoplaced yes)
+		(stroke
+			(width 0.3)
+			(type solid)
+		)
+		(fill
+			(color 255 255 225 1.0)
+		)
+		(uuid "eb0cc2c8-7da1-5290-8d93-ccee41cac81d")
+		(property "Sheetname" "LTE + GNSS: QUECTEL EC200U-EU"
+			(at 145.4 229.3 0)
+			(effects
+				(font
+					(size 1.5 1.5)
+				)
+				(justify left bottom)
+			)
+		)
+		(property "Sheetfile" "modem.kicad_sch"
+			(at 145.4 270.6 0)
+			(effects
+				(font
+					(size 1.1 1.1)
+				)
+				(justify left top)
+			)
+		)
+		(instances
+			(project "pardal"
+				(path "/60a40261-549a-50bf-b741-ec61c524542c"
+					(page "3")
+				)
+			)
+		)
+	)
+	(sheet
+		(at 25 55)
+		(size 100 55)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(fields_autoplaced yes)
+		(stroke
+			(width 0.3)
+			(type solid)
+		)
+		(fill
+			(color 255 255 225 1.0)
+		)
+		(uuid "8464f153-cd21-5a5e-bbe5-ba04b9edfd28")
+		(property "Sheetname" "ACCU, USB-C, QI"
+			(at 25 54.3 0)
+			(effects
+				(font
+					(size 1.5 1.5)
+				)
+				(justify left bottom)
+			)
+		)
+		(property "Sheetfile" "voeding.kicad_sch"
+			(at 25 110.6 0)
+			(effects
+				(font
+					(size 1.1 1.1)
+				)
+				(justify left top)
+			)
+		)
+		(instances
+			(project "pardal"
+				(path "/60a40261-549a-50bf-b741-ec61c524542c"
+					(page "4")
+				)
+			)
+		)
+	)
+	(sheet
+		(at 295 55)
+		(size 100 55)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(fields_autoplaced yes)
+		(stroke
+			(width 0.3)
+			(type solid)
+		)
+		(fill
+			(color 255 255 225 1.0)
+		)
+		(uuid "7d1ac514-6d1e-55b0-9b2b-bb6d18cab9c7")
+		(property "Sheetname" "SCHERM: WAVESHARE 3.4INCH DSI LCD (C) MET BORDJE"
+			(at 295 54.3 0)
+			(effects
+				(font
+					(size 1.5 1.5)
+				)
+				(justify left bottom)
+			)
+		)
+		(property "Sheetfile" "scherm.kicad_sch"
+			(at 295 110.6 0)
+			(effects
+				(font
+					(size 1.1 1.1)
+				)
+				(justify left top)
+			)
+		)
+		(instances
+			(project "pardal"
+				(path "/60a40261-549a-50bf-b741-ec61c524542c"
+					(page "5")
+				)
+			)
+		)
+	)
+	(sheet
+		(at 295 160)
+		(size 100 60)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(fields_autoplaced yes)
+		(stroke
+			(width 0.3)
+			(type solid)
+		)
+		(fill
+			(color 255 255 225 1.0)
+		)
+		(uuid "3d151b90-eb5f-5a42-ba8e-d4c5ef5abb60")
+		(property "Sheetname" "SENSOREN"
+			(at 295 159.3 0)
+			(effects
+				(font
+					(size 1.5 1.5)
+				)
+				(justify left bottom)
+			)
+		)
+		(property "Sheetfile" "sensoren.kicad_sch"
+			(at 295 220.6 0)
+			(effects
+				(font
+					(size 1.1 1.1)
+				)
+				(justify left top)
+			)
+		)
+		(instances
+			(project "pardal"
+				(path "/60a40261-549a-50bf-b741-ec61c524542c"
+					(page "6")
+				)
+			)
+		)
+	)
+	(sheet
+		(at 25 160)
+		(size 100 55)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(fields_autoplaced yes)
+		(stroke
+			(width 0.3)
+			(type solid)
+		)
+		(fill
+			(color 255 255 225 1.0)
+		)
+		(uuid "ff9fb831-841d-5d89-9287-58e5efe8d8dc")
+		(property "Sheetname" "KNOPPEN, AUDIO (LUIDSPREKER + 2 MICROFOONS), TRILMOTOR"
+			(at 25 159.3 0)
+			(effects
+				(font
+					(size 1.5 1.5)
+				)
+				(justify left bottom)
+			)
+		)
+		(property "Sheetfile" "bediening.kicad_sch"
+			(at 25 215.6 0)
+			(effects
+				(font
+					(size 1.1 1.1)
+				)
+				(justify left top)
+			)
+		)
+		(instances
+			(project "pardal"
+				(path "/60a40261-549a-50bf-b741-ec61c524542c"
+					(page "7")
+				)
+			)
+		)
+	)
+	(sheet
+		(at 160 40)
+		(size 100 50)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(fields_autoplaced yes)
+		(stroke
+			(width 0.3)
+			(type solid)
+		)
+		(fill
+			(color 255 255 225 1.0)
+		)
+		(uuid "1536c6b6-8e99-5235-b8b1-eec2d83de91a")
+		(property "Sheetname" "ANTENNES"
+			(at 160 39.3 0)
+			(effects
+				(font
+					(size 1.5 1.5)
+				)
+				(justify left bottom)
+			)
+		)
+		(property "Sheetfile" "antennes.kicad_sch"
+			(at 160 90.6 0)
+			(effects
+				(font
+					(size 1.1 1.1)
+				)
+				(justify left top)
+			)
+		)
+		(instances
+			(project "pardal"
+				(path "/60a40261-549a-50bf-b741-ec61c524542c"
+					(page "8")
+				)
+			)
+		)
+	)
+	(text "- LTE hoofd\n- GNSS (externe patch)\n- Wi-Fi / BT (naar CM3)"
+		(exclude_from_sim no)
+		(at 162.54 43.81 0)
+		(effects
+			(font
+				(size 1.4 1.4)
+			)
+			(justify left top)
+		)
+		(uuid "9ff4912e-e1d5-57b7-a6b3-8f1212dd7eaa")
+	)
+	(polyline
+		(pts
+			(xy 160 123.0)
+			(xy 125 82.5)
+		)
+		(stroke
+			(width 0.5)
+			(type solid)
+		)
+		(fill
+			(type none)
+		)
+		(uuid "39aa8557-9fee-5e38-b67b-85e40c123c56")
+	)
+	(text ""
+		(exclude_from_sim no)
+		(at 142.5 125.0 0)
+		(effects
+			(font
+				(size 1.0 1.0)
+			)
+			(justify top)
+		)
+		(uuid "d23cb172-d721-50a0-b995-30d188276eb6")
+	)
+	(polyline
+		(pts
+			(xy 260 123.0)
+			(xy 295 82.5)
+		)
+		(stroke
+			(width 0.5)
+			(type solid)
+		)
+		(fill
+			(type none)
+		)
+		(uuid "77251ad8-7a3d-5b3d-9ae6-23a3f339492d")
+	)
+	(text ""
+		(exclude_from_sim no)
+		(at 277.5 125.0 0)
+		(effects
+			(font
+				(size 1.0 1.0)
+			)
+			(justify top)
+		)
+		(uuid "6c1651a2-c05d-5f7b-a845-0737999bee82")
+	)
+	(polyline
+		(pts
+			(xy 260 166.0)
+			(xy 295 190.0)
+		)
+		(stroke
+			(width 0.5)
+			(type solid)
+		)
+		(fill
+			(type none)
+		)
+		(uuid "39f9afd6-042c-523e-a0f2-867cd345fcde")
+	)
+	(text ""
+		(exclude_from_sim no)
+		(at 277.5 192.0 0)
+		(effects
+			(font
+				(size 1.0 1.0)
+			)
+			(justify top)
+		)
+		(uuid "7563c85b-44eb-5034-b8c6-38947a5be70d")
+	)
+	(polyline
+		(pts
+			(xy 160 165.0)
+			(xy 125 187.5)
+		)
+		(stroke
+			(width 0.5)
+			(type solid)
+		)
+		(fill
+			(type none)
+		)
+		(uuid "928abbff-a9d2-5b0b-9259-539e1513fbb2")
+	)
+	(text ""
+		(exclude_from_sim no)
+		(at 142.5 189.5 0)
+		(effects
+			(font
+				(size 1.0 1.0)
+			)
+			(justify top)
+		)
+		(uuid "987d2293-2d2c-505f-b88f-392edc303149")
+	)
+	(polyline
+		(pts
+			(xy 210.0 120)
+			(xy 210.0 90)
+		)
+		(stroke
+			(width 0.5)
+			(type solid)
+		)
+		(fill
+			(type none)
+		)
+		(uuid "9797b7f0-3741-56d2-b594-e6847afe25b4")
+	)
+	(text ""
+		(exclude_from_sim no)
+		(at 213.0 103.0 0)
+		(effects
+			(font
+				(size 1.0 1.0)
+			)
+			(justify left)
+		)
+		(uuid "b152be80-8476-5415-98c7-4b87dcee7c7f")
+	)
+	(text "PARDAL DASH rev B - HOOFDSCHEMA"
+		(exclude_from_sim no)
+		(at 25.4 14 0)
+		(effects
+			(font
+				(size 3.5 3.5)
+			)
+			(justify left)
+		)
+		(uuid "e9a3b047-b84f-5dcd-8c5b-97916921361d")
+	)
+	(sheet_instances
+		(path "/"
+			(page "1")
+		)
+	)
+)

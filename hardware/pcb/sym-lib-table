@@ -1,0 +1,6 @@
+(sym_lib_table
+  (version 7)
+  (lib (name "pardal")(type "KiCad")(uri "${KIPRJMOD}/libs/pardal.kicad_sym")(options "")(descr "eUICC, voedingssymbolen"))
+  (lib (name "pardal_cm3")(type "KiCad")(uri "${KIPRJMOD}/libs/pardal_cm3.kicad_sym")(options "")(descr "Radxa CM3 B2B-connectoren"))
+  (lib (name "lcsc")(type "KiCad")(uri "${KIPRJMOD}/libs/lcsc.kicad_sym")(options "")(descr "Uit LCSC/EasyEDA (easyeda2kicad)"))
+)

@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Privacyverklaring – Pardal</title>
+<link rel="icon" href="/static/favicon.svg">
+<style>
+  body { font: 16px/1.55 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; margin: 0; background: #0a1016; color: #e8edf2; }
+  main { max-width: 760px; margin: 0 auto; padding: 32px 20px 60px; }
+  h1 { font-size: 28px; margin: 0 0 4px; } h2 { font-size: 19px; margin: 32px 0 8px; color: #ff8a3d; }
+  .sub { color: #8a98a8; margin: 0 0 24px; }
+  table { border-collapse: collapse; width: 100%; font-size: 14.5px; }
+  th, td { text-align: left; vertical-align: top; padding: 8px 10px; border-bottom: 1px solid #1e2a36; }
+  th { color: #8a98a8; font-weight: 600; }
+  a { color: #4da3ff; } ul { padding-left: 20px; }
+  header { display: flex; align-items: center; gap: 12px; margin-bottom: 18px; }
+  header img { width: 44px; height: 44px; border-radius: 10px; }
+</style>
+</head>
+<body>
+<main>
+<header><img src="/static/icon-180.png" alt=""><strong>Pardal</strong></header>
+<h1>Privacyverklaring</h1>
+<p class="sub">Geldt voor de Pardal-apps voor iPhone en Android. Laatst bijgewerkt: 18 november 2026.</p>
+
+<p>Pardal waarschuwt voor flitsers, verkeersmeldingen en snelheidslimieten en kan navigeren naar een
+bestemming. Er is geen account, geen reclame en geen tracking of analytics van derden. Pardal is gemaakt door JLT Electronics.</p>
+
+<h2>Welke gegevens en waarvoor</h2>
+<table>
+<tr><th>Gegeven</th><th>Waarvoor</th><th>Waar het heen gaat</th><th>Hoe lang</th></tr>
+<tr><td>Je locatie (GPS)</td><td>Waarschuwingen, limieten en kaart in de buurt, navigatie</td><td>Blijft op je toestel, behalve wat hieronder staat</td><td>–</td></tr>
+<tr><td>Locatie en snelheid (ongeveer elke minuut tijdens gebruik), samen met de toestel-ID</td><td>Meldingen in de buurt ophalen, teller "rijders online", controleren dat iemand die meldt echt rijdt (tegen nepmeldingen)</td><td>Pardal-server; afgerond op ongeveer 1 km</td><td>Alleen in het geheugen, hoogstens 15 minuten</td></tr>
+<tr><td>Een willekeurige toestel-ID (op de server gehasht)</td><td>Eén stem per toestel bij meldingen</td><td>Pardal-server</td><td>90 dagen na je laatste gebruik</td></tr>
+<tr><td>Meldingen die je maakt (soort, plek, rijrichting)</td><td>Delen met andere bestuurders</td><td>Pardal-server; zichtbaar voor iedereen zodra 3 toestellen hetzelfde melden</td><td>Tot een dag nadat de melding verlopen is</td></tr>
+<tr><td>Zoektekst bij navigeren</td><td>Adres of plek vinden</td><td>Pardal-server, die namens de server zoekt bij PDOK (Kadaster) en Photon (OpenStreetMap)</td><td>Niet bewaard</td></tr>
+<tr><td>Begin- en eindpunt van een route</td><td>Route berekenen</td><td>Pardal-server (eigen routeplanner)</td><td>Niet bewaard</td></tr>
+<tr><td>Je plek (rond de matrixborden op de snelweg) en het kaartvak waar je rijdt (voor 3D-gebouwen)</td><td>Snelheden op de matrixborden en gebouwen op de kaart ophalen</td><td>Pardal-server</td><td>Niet bewaard</td></tr>
+<tr><td>IP-adres</td><td>Misbruik beperken</td><td>Pardal-server, alleen gehasht met een geheim zout</td><td>In het geheugen; bij een melding of stem zo lang als die melding</td></tr>
+</table>
+
+<p>De webserver houdt een kort technisch logboek bij (welke pagina, tijdstip, foutcode) om storingen op te lossen.
+Daarin staan <strong>geen</strong> IP-adressen, geen zoekteksten en geen posities; het wordt na enkele dagen overschreven.</p>
+
+<h2>Rechtstreeks bij openbare bronnen</h2>
+<p>Voor snelheidsborden en limieten haalt de app openbare gegevens rechtstreeks op. Daarbij zien die
+partijen je IP-adres en een plek:</p>
+<ul>
+<li><strong>PDOK (Kadaster)</strong> – je huidige positie, om de gemeente te bepalen (eens per paar kilometer).</li>
+<li><strong>NDW</strong> – alleen de gemeentecode, om de verkeersborden van die gemeente op te halen.</li>
+<li><strong>OpenStreetMap (Overpass)</strong> – een punt in de buurt, alleen als de Rijkswaterstaat-kaart op die plek geen limiet heeft.</li>
+</ul>
+<p>Deze partijen krijgen geen toestel-ID of andere gegevens van je.</p>
+
+<h2>Wat we niet doen</h2>
+<ul>
+<li>Geen verkoop of delen van gegevens met adverteerders of andere partijen.</li>
+<li>Geen ritgeschiedenis: waar je gereden hebt wordt niet bewaard.</li>
+<li>Locatie op de achtergrond alleen terwijl je Pardal gebruikt; je kunt dat altijd uitzetten in de instellingen van je telefoon.</li>
+</ul>
+
+<h2>Jouw rechten</h2>
+<p>Omdat er geen account is, zijn gegevens niet aan jou als persoon gekoppeld. Wil je dat je toestel-ID
+direct wordt vergeten, verwijder dan de app of mail ons; we verwijderen het dan binnen 30 dagen.</p>
+
+<h2>Contact</h2>
+<p>JLT Electronics – contact via <a href="https://github.com/JLTelectronics/pardal-open/issues">GitHub</a>.</p>
+<p>Kaartgegevens © OpenStreetMap-bijdragers (ODbL) · NDW · Rijkswaterstaat · PDOK.</p>
+</main>
+</body>
+</html>

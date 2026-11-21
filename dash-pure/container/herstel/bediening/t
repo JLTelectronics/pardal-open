@@ -1,0 +1,4 @@
+#!/bin/bash
+
+SP=$DASHPURE/container/herstel/bediening
+python3 -I $SP/tap.py "$@" | nc -w 10 10.0.0.1 2323; sleep 2; $SP/sc.sh >/dev/null

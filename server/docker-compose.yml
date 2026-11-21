@@ -1,0 +1,40 @@
+name: roadping
+
+services:
+  roadping:
+    build: .
+    container_name: roadping
+    restart: unless-stopped
+    security_opt: ["no-new-privileges:true"]
+    cap_drop: [ALL]
+    read_only: true
+    tmpfs: [/tmp]
+    ports:
+      - "${BIND:-127.0.0.1}:8095:8095"
+    environment:
+      TZ: "Europe/Amsterdam"
+      ROADPING_MIN_CONFIRM: "3"
+      ROADPING_MIN_GONE: "2"
+      ROADPING_ADSB_URL: "${ROADPING_ADSB_URL:-}"
+      ROADPING_VALHALLA: "http://valhalla:8002"
+    volumes:
+      - ./data:/data
+
+  valhalla:
+    image: ghcr.io/valhalla/valhalla-scripted:latest
+    container_name: roadping-valhalla
+    restart: unless-stopped
+    security_opt: ["no-new-privileges:true"]
+    mem_limit: 6g
+    environment:
+      tile_urls: "https://download.geofabrik.de/europe/netherlands-latest.osm.pbf"
+      use_tiles_ignore_pbf: "True"
+      force_rebuild: "False"
+      build_elevation: "False"
+      build_admins: "True"
+      build_time_zones: "False"
+      build_transit: "False"
+      server_threads: "4"
+      serve_tiles: "True"
+    volumes:
+      - ./valhalla:/custom_files

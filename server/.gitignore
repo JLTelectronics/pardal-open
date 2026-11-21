@@ -1,0 +1,6 @@
+data/
+__pycache__/
+valhalla/
+valhalla-nieuw/
+valhalla-nieuw.log
+valhalla-oud/

@@ -1,0 +1,1494 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Pardal live</title>
+<meta name="description" content="Live meldingen van Pardal-bestuurders: politie, files, ongevallen, werkzaamheden. Pas zichtbaar als 3 bestuurders hetzelfde melden.">
+<meta property="og:title" content="Pardal live">
+<meta property="og:description" content="Live meldingen van bestuurders — pas zichtbaar als 3 bestuurders hetzelfde melden.">
+<meta name="theme-color" content="#0b1218" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#eef2f5" media="(prefers-color-scheme: light)">
+<link rel="icon" href="/static/tab.svg?v=3" type="image/svg+xml">
+<link rel="icon" href="/static/icon-192.png?v=3" type="image/png" sizes="192x192">
+<link rel="apple-touch-icon" href="/static/icon-180.png?v=3">
+<link rel="manifest" href="/static/manifest.json?v=3">
+<meta property="og:type" content="website">
+<meta property="og:image" content="https://roadping.jltamp.nl/static/og.png?v=3">
+<meta property="og:image:width" content="1200"><meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="application-name" content="Pardal">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+      integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+        integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+<link rel="stylesheet" href="/static/vendor/maplibre-gl.css?v=5.24.1">
+<script src="/static/vendor/maplibre-gl.js?v=5.24.1"></script>
+<script src="/static/vendor/leaflet-maplibre-gl.js?v=0.1.4"></script>
+<style>
+  :root {
+    color-scheme: light dark;
+    --bg: #0b1218; --panel: rgba(13,20,28,.88); --card: rgba(255,255,255,.045); --card2: rgba(255,255,255,.08);
+    --line: rgba(255,255,255,.08); --text: #f3f6f9; --muted: #8b99a9; --faint: #5b6876;
+    --acc: #ff7a00; --acc2: #ffb547; --ok: #2ecc71; --bad: #ff4a3d;
+    --shadow: 0 12px 48px rgba(0,0,0,.5); --r: 16px; --solid: #111a23;
+  }
+  @media (prefers-color-scheme: light) {
+    :root { --bg: #e8edf1; --panel: rgba(255,255,255,.92); --card: rgba(20,32,43,.035); --card2: rgba(20,32,43,.07);
+            --line: rgba(20,32,43,.09); --text: #14202b; --muted: #5a6876; --faint: #94a1ae; --shadow: 0 12px 48px rgba(20,32,43,.18); --solid: #ffffff; }
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: var(--bg); color: var(--text); overflow: hidden;
+    font: 15px/1.45 -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, sans-serif; -webkit-font-smoothing: antialiased; }
+  button { font: inherit; color: inherit; }
+  #map { position: fixed; inset: 0; background: var(--bg); }
+  .leaflet-container { font: inherit; background: var(--bg); }
+  .rbase { filter: grayscale(.82) contrast(.92) brightness(1.04); }
+  @media (prefers-color-scheme: dark) { .rbase { filter: invert(1) hue-rotate(180deg) grayscale(.88) brightness(.82) contrast(.88); } }
+  .leaflet-control-attribution { background: transparent !important; color: var(--faint) !important; font-size: 10px; }
+  .leaflet-control-attribution a { color: var(--muted) !important; }
+  .glass { background: var(--panel); border: 1px solid var(--line); box-shadow: var(--shadow);
+    backdrop-filter: blur(18px) saturate(1.3); -webkit-backdrop-filter: blur(18px) saturate(1.3); }
+
+  .ctl { position: fixed; z-index: 1000; right: 16px; top: 16px; display: flex; flex-direction: column; gap: 8px; }
+  .ctl button { width: 44px; height: 44px; border-radius: 14px; cursor: pointer; display: grid; place-items: center; padding: 0; }
+  .ctl button:hover { border-color: var(--acc); }
+  .ctl svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
+
+  .panel { position: fixed; z-index: 1000; left: 16px; top: 16px; bottom: 16px; width: 372px; display: flex; flex-direction: column;
+    border-radius: 20px; overflow: hidden; }
+  .head { display: flex; align-items: center; gap: 11px; padding: 16px 16px 12px; }
+  .logo { width: 38px; height: 38px; border-radius: 10px; flex: none; }
+  .brand { font-size: 19px; font-weight: 800; letter-spacing: -.3px; line-height: 1.1; }
+  .brand b { color: var(--acc); font-weight: 800; }
+  .live { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); margin-top: 3px; }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--ok); animation: ping 2s infinite; }
+  .dot.off { background: var(--bad); animation: none; }
+  @keyframes ping { 0% { box-shadow: 0 0 0 0 rgba(46,204,113,.55); } 70% { box-shadow: 0 0 0 9px rgba(46,204,113,0); } 100% { box-shadow: 0 0 0 0 rgba(46,204,113,0); } }
+  .info { margin-left: auto; width: 36px; height: 36px; border-radius: 12px; border: 1px solid var(--line); background: var(--card);
+    cursor: pointer; display: grid; place-items: center; color: var(--muted); font-weight: 800; }
+  .info:hover { color: var(--text); border-color: var(--acc); }
+  .bar { height: 2px; margin: 0; background: var(--line); overflow: hidden; }
+  .bar i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, var(--acc), var(--acc2)); }
+
+  .stats { display: grid; grid-template-columns: repeat(3, 1fr); margin: 0 16px 12px; border: 1px solid var(--line);
+    border-radius: 14px; background: var(--card); }
+  .stat { padding: 9px 12px; min-width: 0; }
+  .stat + .stat { border-left: 1px solid var(--line); }
+  .stat .n { font-size: 22px; font-weight: 800; letter-spacing: -.5px; font-variant-numeric: tabular-nums; line-height: 1.1; }
+  .stat .l { font-size: 11px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .stat.hl .n { color: var(--acc); }
+  .seg { display: grid; grid-template-columns: repeat(3, 1fr); gap: 2px; margin: 0 16px 12px; padding: 3px; border-radius: 12px; background: var(--card2); }
+  .seg button { border: 0; background: none; padding: 7px 0; border-radius: 9px; font-size: 13px; font-weight: 700; color: var(--muted); cursor: pointer; }
+  .seg button.on { background: var(--solid); color: var(--text); box-shadow: 0 1px 3px rgba(0,0,0,.25); }
+  .grp { border-bottom: 1px solid var(--line); }
+  .grp > summary { list-style: none; display: flex; align-items: center; gap: 9px; padding: 12px 2px; cursor: pointer; user-select: none;
+    font-size: 13.5px; font-weight: 700; }
+  .grp > summary::-webkit-details-marker { display: none; }
+  .grp > summary .gd { width: 8px; height: 8px; border-radius: 3px; flex: none; }
+  .grp > summary small { margin-left: auto; font-weight: 600; color: var(--muted); font-size: 12px; font-variant-numeric: tabular-nums; }
+  .grp > summary::after { content: ""; width: 7px; height: 7px; border-right: 2px solid var(--faint); border-bottom: 2px solid var(--faint);
+    transform: rotate(-45deg); margin: 0 4px 0 6px; transition: transform .15s; }
+  .grp[open] > summary::after { transform: rotate(45deg); }
+  .grp > .list { padding-bottom: 12px; }
+  .pfoot { padding: 10px 16px 14px; border-top: 1px solid var(--line); }
+  .applink { width: 100%; display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 12px; border: 1px solid var(--line);
+    background: var(--card); cursor: pointer; font-weight: 700; font-size: 13.5px; text-align: left; }
+  .applink:hover { border-color: var(--acc); }
+  .applink svg { width: 18px; height: 18px; fill: none; stroke: var(--acc); stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+  .applink .go { margin-left: auto; color: var(--muted); }
+
+  .scroll { flex: 1; overflow-y: auto; padding: 0 16px 14px; scrollbar-width: thin; overscroll-behavior: contain; }
+  [data-pane][hidden] { display: none; }
+  h2 { display: flex; align-items: center; justify-content: space-between; font-size: 11px; font-weight: 700; color: var(--muted);
+    text-transform: uppercase; letter-spacing: .08em; margin: 18px 0 8px; }
+  h2 small { font-weight: 600; text-transform: none; letter-spacing: 0; color: var(--faint); font-size: 11.5px; }
+
+  .today { background: var(--card); border: 1px solid var(--line); border-radius: var(--r); padding: 12px 14px; }
+  .trow { display: flex; gap: 14px; }
+  .trow div { flex: 1; } .trow .n { font-size: 19px; font-weight: 800; font-variant-numeric: tabular-nums; }
+  .trow .l { font-size: 11.5px; color: var(--muted); }
+  .spark { display: flex; align-items: flex-end; gap: 2px; height: 40px; margin-top: 12px; }
+  .spark i { flex: 1; min-height: 2px; border-radius: 2px 2px 1px 1px; background: var(--card2); transition: height .4s; }
+  .spark i.on { background: linear-gradient(180deg, var(--acc2), var(--acc)); }
+  .axis { display: flex; justify-content: space-between; font-size: 10px; color: var(--faint); margin-top: 4px; }
+
+  .legend, .layers { display: flex; flex-wrap: wrap; gap: 6px; }
+  .layers { flex-direction: column; gap: 0; }
+  .layer { display: flex; align-items: center; gap: 10px; width: 100%; padding: 10px 2px; border: 0; border-bottom: 1px solid var(--line);
+    background: none; cursor: pointer; font-size: 13.5px; font-weight: 600; text-align: left; user-select: none; }
+  .layer .c { margin-left: auto; color: var(--muted); font-weight: 600; font-size: 12px; font-variant-numeric: tabular-nums; }
+  .layer .sw { width: 34px; height: 20px; border-radius: 10px; background: var(--card2); position: relative; flex: none; transition: background .15s; }
+  .layer .sw::after { content: ""; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: 50%; background: #fff;
+    box-shadow: 0 1px 3px rgba(0,0,0,.35); transition: transform .15s; }
+  .layer.on .sw { background: var(--acc); } .layer.on .sw::after { transform: translateX(14px); }
+  .layer .ld { width: 8px; height: 8px; border-radius: 3px; flex: none; }
+  .src { flex: none; font-size: 10px; font-weight: 800; letter-spacing: .05em; padding: 2px 6px; border-radius: 6px;
+    background: rgba(76,141,255,.16); color: #6ea4ff; }
+  .opin { position: relative; width: 32px; height: 32px; }
+  .opin .ic { width: 32px; height: 32px; filter: drop-shadow(0 2px 4px rgba(0,0,0,.45)); }
+  .opin .tag { position: absolute; left: 50%; bottom: -9px; transform: translateX(-50%); font: 800 8px/12px -apple-system, sans-serif;
+    padding: 0 4px; border-radius: 4px; background: #14202b; color: #fff; letter-spacing: .04em; }
+  .sub { font-size: 11px; color: var(--muted); margin-top: 1px; }
+  .clu { display: grid; place-items: center; border-radius: 50%; background: var(--col); color: #fff; font-weight: 800;
+    font-variant-numeric: tabular-nums; border: 2px solid rgba(255,255,255,.92); box-shadow: 0 0 0 4px color-mix(in srgb, var(--col) 30%, transparent), 0 2px 6px rgba(0,0,0,.4);
+    cursor: pointer; transition: transform .12s; }
+  .clu:hover { transform: scale(1.1); }
+  .item .t .w { font-weight: 600; color: var(--muted); }
+  .odot { width: 8px; height: 8px; border-radius: 2.5px; border: 1px solid rgba(255,255,255,.75); opacity: .9; }
+  .item .cnt { font-weight: 700; color: var(--muted); }
+  .chip { display: inline-flex; align-items: center; gap: 6px; padding: 5px 10px 5px 5px; border-radius: 999px; cursor: pointer;
+    background: var(--card); border: 1px solid var(--line); font-size: 12.5px; transition: opacity .15s, border-color .15s; user-select: none; }
+  .chip:hover { border-color: var(--acc); }
+  .chip.off { opacity: .38; }
+  .chip .ic { width: 22px; height: 22px; } .chip .c { color: var(--muted); font-variant-numeric: tabular-nums; }
+
+  .list { display: flex; flex-direction: column; gap: 6px; }
+  .list { gap: 4px; }
+  .item { position: relative; display: flex; align-items: center; gap: 11px; padding: 8px 10px; border-radius: 12px; cursor: pointer;
+    background: transparent; border: 1px solid transparent; transition: background .12s, border-color .12s; text-align: left; width: 100%; overflow: hidden; }
+  .item:hover { background: var(--card); border-color: var(--line); }
+  .item.new { animation: flash 2.4s ease-out; }
+  @keyframes flash { 0% { background: rgba(255,122,0,.28); } 100% { background: var(--card); } }
+  .item .ic { width: 32px; height: 32px; flex: none; }
+  .item .mid { min-width: 0; flex: 1; }
+  .item .t { font-weight: 650; font-size: 14px; } .item .p { font-size: 12.5px; color: var(--text); opacity: .8; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .item .s { font-size: 11.5px; color: var(--muted); }
+  .item .badge { flex: none; font-size: 12px; font-weight: 800; padding: 3px 8px; border-radius: 999px; background: var(--card2); }
+  .item .life { position: absolute; left: 0; bottom: 0; height: 3px; background: var(--col); opacity: .7; border-radius: 0 3px 0 0; }
+  .empty { padding: 10px 12px; border-radius: 12px; background: var(--card); color: var(--muted); font-size: 12.5px; line-height: 1.45; }
+  .empty .big { display: none; }
+  .empty b { display: block; color: var(--text); font-size: 13px; font-weight: 650; }
+  .foot { font-size: 11.5px; color: var(--faint); margin-top: 16px; line-height: 1.55; }
+  .foot a { color: var(--muted); }
+
+  .pin { position: relative; width: 42px; height: 42px; transition: transform .15s; }
+  .pin:hover { transform: scale(1.12); }
+  .pin .ic { width: 42px; height: 42px; filter: drop-shadow(0 3px 6px rgba(0,0,0,.45)); position: relative; }
+  .pin .n { position: absolute; right: -7px; top: -7px; min-width: 21px; height: 21px; padding: 0 5px; border-radius: 11px;
+    background: #fff; color: #14202b; font: 800 11px/21px -apple-system, sans-serif; text-align: center; box-shadow: 0 1px 4px rgba(0,0,0,.35); }
+  .pin.fresh::before { content: ""; position: absolute; inset: 0; border-radius: 50%; background: var(--col); animation: ripple 1.8s ease-out infinite; }
+  @keyframes ripple { 0% { transform: scale(1); opacity: .55; } 100% { transform: scale(2.6); opacity: 0; } }
+  .me { width: 18px; height: 18px; border-radius: 50%; background: #4c8dff; border: 3px solid #fff; box-shadow: 0 0 0 6px rgba(76,141,255,.25); }
+  .leaflet-popup-content-wrapper { background: var(--panel); color: var(--text); border-radius: 16px; box-shadow: var(--shadow);
+    backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); border: 1px solid var(--line); }
+  .leaflet-popup-tip { background: var(--panel); }
+  .leaflet-popup-content { margin: 12px 14px; min-width: 190px; }
+  .leaflet-container a.leaflet-popup-close-button { color: var(--muted); }
+  .pop { display: flex; gap: 10px; align-items: flex-start; } .pop .ic { width: 34px; height: 34px; flex: none; }
+  .pop .t { font-weight: 800; font-size: 15px; } .pop .p { font-size: 13px; } .pop .s { color: var(--muted); font-size: 12.5px; margin-top: 2px; }
+
+  .toasts { position: fixed; z-index: 1100; top: 16px; left: 50%; transform: translateX(-50%); display: flex; flex-direction: column; gap: 8px; pointer-events: none; }
+  .toast { display: flex; align-items: center; gap: 10px; padding: 9px 16px 9px 9px; border-radius: 999px; font-size: 14px; pointer-events: auto; cursor: pointer;
+    animation: tin .35s cubic-bezier(.2,.9,.3,1.2), tout .4s ease-in 5.6s forwards; }
+  .toast .ic { width: 30px; height: 30px; } .toast b { font-weight: 800; }
+  @keyframes tin { from { transform: translateY(-14px) scale(.95); opacity: 0; } }
+  @keyframes tout { to { transform: translateY(-10px); opacity: 0; } }
+
+  .modal { position: fixed; inset: 0; z-index: 1200; display: none; place-items: center; background: rgba(0,0,0,.45); padding: 16px; }
+  .modal.open { display: grid; animation: fade .2s; }
+  @keyframes fade { from { opacity: 0; } }
+  .sheet { max-width: 520px; width: 100%; max-height: 86vh; overflow-y: auto; border-radius: 24px; padding: 24px;
+    background: var(--solid); border: 1px solid var(--line); box-shadow: var(--shadow); }
+  .sheet h3 { margin: 0 0 4px; font-size: 22px; letter-spacing: -.3px; } .sheet h3 b { color: var(--acc); }
+  .sheet .lead { color: var(--muted); margin: 0 0 16px; }
+  .how { display: grid; gap: 12px; }
+  .step { display: flex; gap: 12px; align-items: flex-start; font-size: 14px; color: var(--muted); }
+  .step .k { flex: none; width: 28px; height: 28px; border-radius: 9px; display: grid; place-items: center; background: rgba(255,122,0,.14); color: var(--acc); font-weight: 800; }
+  .step b { color: var(--text); }
+  .sheet .close { margin-top: 20px; width: 100%; padding: 12px; border-radius: 14px; border: 0; background: var(--acc); color: #fff; font-weight: 800; cursor: pointer; }
+
+  @media (max-width: 720px) {
+    .panel { left: 8px; right: 8px; top: auto; bottom: calc(8px + env(safe-area-inset-bottom)); width: auto; height: 48vh; border-radius: 22px; transition: height .25s; }
+    .panel.small { height: 172px; }
+    .grab { display: block !important; }
+    .head { padding: 6px 14px 2px; } .logo { width: 38px; height: 38px; } .brand { font-size: 19px; }
+    .stats { padding: 10px 14px 0; } .stat .n { font-size: 22px; } .scroll { padding: 2px 14px 14px; } .bar { margin: 8px 14px 0; }
+    .ctl { top: calc(12px + env(safe-area-inset-top)); right: 12px; }
+    .toasts { top: calc(12px + env(safe-area-inset-top)); width: calc(100% - 90px); left: 12px; transform: none; }
+  }
+  .grab { display: none; width: 100%; height: 22px; border: 0; background: none; cursor: pointer; padding: 0; }
+  .grab::after { content: ""; display: block; width: 42px; height: 5px; border-radius: 3px; background: var(--faint); margin: 9px auto 0; opacity: .6; }
+  .hbtn { margin-left: 6px; width: 36px; height: 36px; border-radius: 12px; border: 1px solid var(--line); background: var(--card);
+    cursor: pointer; display: grid; place-items: center; color: var(--muted); font-weight: 800; font-size: 12px; position: relative; }
+  .hbtn:hover { color: var(--text); border-color: var(--acc); }
+  .head .info { margin-left: 6px; }
+  .head .spacer { margin-left: auto; }
+  .langmenu { position: absolute; z-index: 1300; top: 64px; right: 16px; padding: 6px; border-radius: 14px; display: none; min-width: 160px; }
+  .langmenu.open { display: block; animation: fade .15s; }
+  .langmenu button { display: block; width: 100%; text-align: left; padding: 8px 12px; border: 0; background: none; border-radius: 9px; cursor: pointer; font-size: 14px; }
+  .langmenu button:hover, .langmenu button.on { background: var(--card2); }
+  .langmenu button.on { font-weight: 800; color: var(--acc); }
+  .appbtn { display: flex; align-items: center; justify-content: center; gap: 8px; margin: 12px 18px 0; padding: 11px; border-radius: 14px; border: 0;
+    cursor: pointer; font-weight: 800; color: #fff; background: linear-gradient(135deg, var(--acc), #ff9a3c); box-shadow: 0 6px 18px rgba(255,122,0,.3); }
+  .appbtn svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
+  .appsheet { max-width: 760px; }
+  .tabs { display: flex; gap: 6px; margin: 4px 0 18px; flex-wrap: wrap; }
+  .tabs button { padding: 8px 14px; border-radius: 999px; border: 1px solid var(--line); background: var(--card); cursor: pointer; font-weight: 700; font-size: 13px; }
+  .tabs button.on { background: var(--acc); border-color: var(--acc); color: #fff; }
+  .tabs.modes { margin-top: -8px; } .tabs.modes button { padding: 6px 12px; font-size: 12.5px; } .tabs.modes button.on { background: var(--card2); border-color: var(--acc); color: var(--text); }
+  .stage { display: grid; place-items: center; min-height: 420px; }
+  .dev-round { width: min(380px, 78vw); aspect-ratio: 1; border-radius: 50%; padding: 14px; background: linear-gradient(145deg, #2a333d, #0b0f13);
+    box-shadow: 0 20px 60px rgba(0,0,0,.55), inset 0 1px 2px rgba(255,255,255,.15); }
+  .dev-round video { width: 100%; height: 100%; border-radius: 50%; object-fit: cover; display: block; background: #000; }
+  .dev-phone { width: min(300px, 66vw); aspect-ratio: 540 / 1170; border-radius: 34px; padding: 10px; background: linear-gradient(145deg, #2a333d, #0b0f13);
+    box-shadow: 0 20px 60px rgba(0,0,0,.55), inset 0 1px 2px rgba(255,255,255,.15); }
+  .dev-phone video { width: 100%; height: 100%; border-radius: 26px; object-fit: cover; display: block; background: #000; }
+  .cap { text-align: center; color: var(--muted); font-size: 14px; margin: 16px auto 0; max-width: 520px; }
+  .hero { display: flex; align-items: center; gap: 14px; margin-bottom: 18px; }
+  .hero img { width: 64px; height: 64px; border-radius: 16px; flex: none; box-shadow: 0 8px 24px rgba(255,90,0,.35); }
+  .hero h3 { font-size: 28px; margin: 0; } .hero .lead { margin: 2px 0 0; }
+  .feats { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
+  .feat { display: flex; gap: 11px; padding: 12px; border-radius: 14px; background: var(--card); border: 1px solid var(--line); }
+  .feat .fi { flex: none; width: 34px; height: 34px; border-radius: 10px; display: grid; place-items: center; background: rgba(255,122,0,.14); color: var(--acc); }
+  .feat .fi svg { width: 19px; height: 19px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+  .feat b { display: block; font-size: 13.5px; } .feat span { display: block; font-size: 12.5px; color: var(--muted); line-height: 1.4; margin-top: 1px; }
+  .appsheet h2 { margin-top: 22px; }
+  .store { display: flex; flex-direction: column; align-items: center; gap: 4px; margin-top: 18px; text-align: center; }
+  .store .soon { display: inline-flex; align-items: center; gap: 8px; padding: 10px 18px; border-radius: 12px; background: var(--card2); border: 1px solid var(--line); font-weight: 800; font-size: 14px; }
+  .store .sub { font-size: 12.5px; color: var(--muted); max-width: 460px; }
+  @media (max-width: 560px) { .feats { grid-template-columns: 1fr; } .hero h3 { font-size: 24px; } .sheet { padding: 20px 16px; } }
+  .topbar { position: fixed; z-index: 1001; left: 16px; top: 16px; width: 372px; height: 52px; display: flex; align-items: center; gap: 8px;
+    padding: 0 6px 0 8px; border-radius: 18px; }
+  .topbar .logo { width: 34px; height: 34px; border-radius: 9px; }
+  .topbar input { flex: 1; min-width: 0; height: 38px; border: 0; outline: 0; background: none; color: var(--text); font: inherit; font-size: 15px; }
+  .topbar input::placeholder { color: var(--muted); }
+  .tbtn { flex: none; width: 38px; height: 38px; border-radius: 12px; border: 0; background: var(--card2); cursor: pointer; display: grid; place-items: center; color: var(--text); }
+  .tbtn:hover { color: var(--acc); }
+  .tbtn svg { width: 19px; height: 19px; fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
+  .results { position: fixed; z-index: 1002; left: 16px; top: 74px; width: 372px; border-radius: 16px; padding: 6px; display: none; max-height: 60vh; overflow-y: auto; }
+  .results.open { display: block; }
+  .results button { display: flex; flex-direction: column; width: 100%; text-align: left; border: 0; background: none; padding: 9px 12px; border-radius: 10px; cursor: pointer; }
+  .results button:hover, .results button.sel { background: var(--card2); }
+  .results b { font-weight: 650; } .results span { font-size: 12px; color: var(--muted); }
+  .panel .head .logo, .panel .head .brand { display: none; }
+  .panel .head { padding: 12px 14px 10px; }
+  .stats { margin: 0 14px 10px; } .stat { padding: 7px 11px; } .stat .n { font-size: 19px; }
+  .panel { top: 80px; transition: transform .25s cubic-bezier(.2,.8,.2,1), opacity .2s; }
+  .panel.closed { transform: translateX(calc(-100% - 24px)); opacity: 0; pointer-events: none; }
+  .rail { position: fixed; z-index: 1000; right: 16px; top: 16px; display: flex; flex-direction: column; gap: 4px; padding: 6px; border-radius: 18px; }
+  .rail button { width: 62px; padding: 7px 2px 6px; border: 0; border-radius: 13px; background: none; cursor: pointer; display: flex; flex-direction: column;
+    align-items: center; gap: 3px; color: var(--muted); font-size: 10.5px; font-weight: 700; line-height: 1.1; position: relative; }
+  .rail button svg { width: 24px; height: 24px; }
+  .rail button svg path { fill: currentColor; }
+  .rail button:hover { background: var(--card); color: var(--text); }
+  .rail button.on { background: var(--card2); color: var(--text); }
+  .rail button.on svg path { fill: var(--rc); }
+  .rail button.on::before { content: ""; position: absolute; left: 0; top: 10px; bottom: 10px; width: 3px; border-radius: 0 3px 3px 0; background: var(--rc); }
+  .rail button:not(.on) { opacity: .62; }
+  .rail button:not(.on):hover { opacity: 1; }
+  .rail .cnt { position: absolute; top: 4px; right: 5px; min-width: 15px; height: 15px; padding: 0 4px; border-radius: 8px; font-size: 9px; font-style: normal; line-height: 15px;
+    font-weight: 800; background: var(--rc); color: #fff; font-variant-numeric: tabular-nums; }
+  .rail button.dark .cnt { color: #14202b; }
+  .rail .sep { height: 1px; margin: 3px 8px; background: var(--line); }
+  .ctl { top: auto; bottom: 26px; flex-direction: row; }
+  .timeline { position: fixed; z-index: 1000; left: 50%; transform: translateX(-50%); bottom: 18px; width: min(520px, calc(100% - 720px)); min-width: 280px;
+    display: none; align-items: center; gap: 10px; padding: 8px 14px 8px 8px; border-radius: 16px; }
+  .timeline.open { display: flex; }
+  .timeline .tbtn { background: var(--acc); color: #fff; }
+  .timeline input[type=range] { flex: 1; accent-color: var(--acc); }
+  .timeline .tt { min-width: 92px; text-align: right; font-weight: 700; font-variant-numeric: tabular-nums; font-size: 13px; }
+  .timeline .tt small { display: block; font-weight: 600; color: var(--muted); font-size: 10.5px; }
+  .here .row { display: flex; align-items: center; gap: 8px; padding: 4px 0; font-size: 13px; }
+  .here .row .ic { width: 24px; height: 24px; flex: none; }
+  .here h4 { margin: 0 0 4px; font-size: 14px; }
+  .here .none { color: var(--muted); font-size: 12.5px; }
+  @media (max-width: 720px) {
+    .topbar { left: 10px; right: 10px; width: auto; top: calc(10px + env(safe-area-inset-top)); }
+    .results { left: 10px; right: 10px; width: auto; top: calc(68px + env(safe-area-inset-top)); }
+    .rail { left: 10px; right: 10px; top: calc(70px + env(safe-area-inset-top)); flex-direction: row; overflow-x: auto; padding: 4px; border-radius: 14px; scrollbar-width: none; }
+    .rail::-webkit-scrollbar { display: none; }
+    .rail button { flex: none; width: auto; min-width: 58px; flex-direction: row; gap: 5px; padding: 7px 10px; font-size: 12px; }
+    .rail button.on::before { left: 10px; right: 10px; top: auto; bottom: 0; width: auto; height: 2.5px; border-radius: 3px 3px 0 0; }
+    .rail .sep { width: 1px; height: auto; margin: 6px 2px; }
+    .rail button svg { width: 18px; height: 18px; }
+    .rail .cnt { position: static; margin-left: 2px; }
+    .ctl { top: calc(126px + env(safe-area-inset-top)); bottom: auto; right: 10px; flex-direction: column; }
+    .ctl #zin, .ctl #zout { display: none; }
+    .timeline { left: 10px; right: 10px; width: auto; min-width: 0; transform: none; top: calc(126px + env(safe-area-inset-top)); bottom: auto; margin-right: 58px; }
+    .panel { top: auto; }
+    .panel.closed { transform: none; opacity: 1; pointer-events: auto; }
+    .panel .head .logo, .panel .head .brand { display: none; }
+    .toasts { top: calc(126px + env(safe-area-inset-top)); }
+  }
+  @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+</style>
+</head>
+<body>
+<div id="map"></div>
+
+<div class="ctl">
+  <button class="glass" id="locate" data-i18n-title="locate">
+    <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.2"/><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3"/><circle cx="12" cy="12" r="7"/></svg></button>
+  <button class="glass" id="europe" data-i18n-title="europe">
+    <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.7 3.8 5.7 3.8 9S14.5 18.3 12 21c-2.5-2.7-3.8-5.7-3.8-9S9.5 5.7 12 3z"/></svg></button>
+  <button class="glass" id="home" data-i18n-title="home">
+    <svg viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
+  <button class="glass" id="zin" data-i18n-title="zin"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></button>
+  <button class="glass" id="zout" data-i18n-title="zout"><svg viewBox="0 0 24 24"><path d="M5 12h14"/></svg></button>
+</div>
+
+<div class="topbar glass">
+  <img class="logo" src="/static/favicon.svg?v=3" alt="Pardal">
+  <input id="q" type="search" autocomplete="off" spellcheck="false" data-i18n-ph="search_ph" placeholder="Zoek een plaats of weg">
+  <button class="tbtn" id="listBtn" data-i18n-title="list_btn"><svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h10"/></svg></button>
+</div>
+<div class="results glass" id="results"></div>
+<nav class="rail glass" id="rail"></nav>
+<div class="timeline glass" id="timeline">
+  <button class="tbtn" id="play" data-i18n-title="play"><svg viewBox="0 0 24 24" id="playIc"><path d="M8 5v14l11-7z" fill="currentColor" stroke="none"/></svg></button>
+  <input type="range" id="tslider" min="0" max="0" value="0" step="1">
+  <div class="tt" id="ttime">–</div>
+</div>
+
+<div class="toasts" id="toasts"></div>
+
+<aside class="panel glass" id="panel">
+  <button class="grab" id="grab" data-i18n-title="grab"></button>
+  <header class="head">
+    <img class="logo" src="/static/favicon.svg?v=3" alt="">
+    <div>
+      <div class="brand">Par<b>dal</b></div>
+      <div class="live"><span class="dot" id="dot"></span><span id="status" data-i18n="connecting">verbinden…</span></div>
+    </div>
+    <span class="spacer"></span>
+    <button class="hbtn" id="langBtn" data-i18n-title="language"><span id="langCode">NL</span></button>
+    <button class="hbtn" id="infoBtn" aria-label="Pardal">i</button>
+  </header>
+  <div class="langmenu glass" id="langMenu" role="menu"></div>
+  <div class="stats">
+    <div class="stat hl"><div class="n" id="online">–</div><div class="l" data-i18n="st_online">nu online</div></div>
+    <div class="stat"><div class="n" id="count">–</div><div class="l" data-i18n="st_drivers">bestuurders</div></div>
+    <div class="stat"><div class="n" id="ocount">–</div><div class="l" data-i18n="st_official">officieel</div></div>
+  </div>
+  <nav class="seg" role="tablist">
+    <button data-tab="live" data-i18n="tab_live">Live</button>
+    <button data-tab="map" data-i18n="tab_map">Kaart</button>
+    <button data-tab="stats" data-i18n="tab_stats">Statistiek</button>
+  </nav>
+  <div class="bar"><i id="bar"></i></div>
+  <div class="scroll">
+    <section data-pane="live">
+      <details class="grp" open><summary><span class="gd" style="background:#ff7a00"></span><span data-i18n="h_community">Van bestuurders</span><small id="listInfo"></small></summary><div class="list" id="list"></div></details>
+      <details class="grp" open><summary><span class="gd" style="background:#5ac8fa"></span><span data-i18n="h_sky">Lucht &amp; weer</span><small id="sInfo"></small></summary><div class="list" id="slist"></div></details>
+      <details class="grp" open><summary><span class="gd" style="background:#ff4a3d"></span><span data-i18n="h_official">Officieel nu</span><small id="oInfo"></small></summary><div class="list" id="olist"></div></details>
+      <details class="grp"><summary><span class="gd" style="background:#ffb020"></span><span data-i18n="h_works">Werkzaamheden &amp; maatregelen</span><small id="wInfo"></small></summary><div class="list" id="wlist"></div></details>
+    </section>
+    <section data-pane="map" hidden>
+      <h2 data-i18n="h_layers">Op de kaart</h2>
+      <div class="layers" id="layers"></div>
+      <h2><span data-i18n="h_types">Soorten</span> <small data-i18n="tap_filter">tik om te filteren</small></h2>
+      <div class="legend" id="legend"></div>
+    </section>
+    <section data-pane="stats" hidden>
+      <h2 data-i18n="h_today">Vandaag</h2>
+      <div class="today">
+        <div class="trow">
+          <div><div class="n" id="tConfirmed">–</div><div class="l" data-i18n="t_confirmed">bevestigd</div></div>
+          <div><div class="n" id="tReports">–</div><div class="l" data-i18n="t_reported">gemeld</div></div>
+          <div><div class="n" id="tVotes">–</div><div class="l" data-i18n="t_votes">stemmen</div></div>
+          <div><div class="n" id="tDrivers">–</div><div class="l" data-i18n="st_drivers">bestuurders</div></div>
+        </div>
+        <div class="spark" id="spark" data-i18n-title="spark_aria"></div>
+        <div class="axis"><span id="ax0"></span><span data-i18n="spark">meldingen per uur</span><span data-i18n="now">nu</span></div>
+      </div>
+      <h2 data-i18n="st_online">nu online</h2>
+      <div class="empty" id="drivingSub"></div>
+      <h2 data-i18n="L_official">Officieel</h2>
+      <div class="empty" id="wcountSub"></div>
+      <div class="foot" id="foot"></div>
+    </section>
+  </div>
+  <footer class="pfoot">
+    <button class="applink" id="appBtn"><svg viewBox="0 0 24 24"><rect x="6" y="2.5" width="12" height="19" rx="3"/><path d="M10 6h4M10.5 18h3"/></svg>
+      <span data-i18n="app_btn">Bekijk de app</span><span class="go">→</span></button>
+  </footer>
+</aside>
+
+
+<div class="modal" id="about" role="dialog" aria-modal="true" aria-labelledby="aboutTitle">
+  <div class="sheet">
+    <h3 id="aboutTitle"><span data-i18n="about">Over</span> Par<b>dal</b></h3>
+    <p class="lead" data-i18n="about_lead"></p>
+    <div class="how">
+      <div class="step"><span class="k">1</span><div data-i18n-html="step1"></div></div>
+      <div class="step"><span class="k">3</span><div data-i18n-html="step2"></div></div>
+      <div class="step"><span class="k">✓</span><div data-i18n-html="step3"></div></div>
+      <div class="step"><span class="k">🔒</span><div data-i18n-html="step4"></div></div>
+    </div>
+    <button class="close" data-close data-i18n="close">Sluiten</button>
+  </div>
+</div>
+
+<div class="modal" id="appModal" role="dialog" aria-modal="true" aria-labelledby="appTitle">
+  <div class="sheet appsheet">
+    <div class="hero">
+      <img src="/static/favicon.svg?v=3" alt="">
+      <div><h3 id="appTitle">Par<b>dal</b></h3><p class="lead" data-i18n="app_tag"></p></div>
+    </div>
+    <div class="feats" id="feats"></div>
+    <h2 data-i18n="app_title">Zo ziet de app eruit</h2>
+    <div class="tabs" id="appTabs"></div>
+    <div class="tabs modes" id="appModes"></div>
+    <div class="stage" id="appStage"></div>
+    <p class="cap" id="appCap"></p>
+    <div class="store"><span class="soon" data-i18n="store_soon">Binnenkort in Google Play</span><span class="sub" data-i18n="store_sub"></span></div>
+    <button class="close" data-close data-i18n="close">Sluiten</button>
+  </div>
+</div>
+
+<script>
+const LANGS = ["nl", "en", "de", "es", "pt", "fy"];
+const LANG_NAMES = ["Nederlands", "English", "Deutsch", "Español", "Português", "Frysk"];
+const LOCALES = ["nl-NL", "en-GB", "de-DE", "es-ES", "pt-PT", "fy-NL"];
+const TXT = {
+  europe: ["Heel Europa", "All of Europe", "Ganz Europa", "Toda Europa", "Toda a Europa", "Hiel Europa"],
+  n_view: ["{0} in beeld", "{0} in view", "{0} im Bild", "{0} en vista", "{0} à vista", "{0} yn byld"],
+  src_off: ["Bron: {0} (officieel)", "Source: {0} (official)", "Quelle: {0} (offiziell)", "Fuente: {0} (oficial)", "Fonte: {0} (oficial)", "Boarne: {0} (offisjeel)"],
+  "N_Verkeerswaarschuwing": ["Verkeerswaarschuwing", "Traffic warning", "Verkehrswarnung", "Aviso de tráfico", "Aviso de trânsito", "Ferkearswarskôging"],
+  tab_live: ["Live", "Live", "Live", "En directo", "Ao vivo", "Live"],
+  tab_map: ["Kaart", "Map", "Karte", "Mapa", "Mapa", "Kaart"],
+  tab_stats: ["Statistiek", "Statistics", "Statistik", "Estadísticas", "Estatísticas", "Statistyk"],
+  title_page: ["Pardal — live verkeer", "Pardal — live traffic", "Pardal — Verkehr live", "Pardal — tráfico en directo", "Pardal — trânsito ao vivo", "Pardal — live ferkear"],
+  live: ["live", "live", "live", "en directo", "ao vivo", "live"],
+  connecting: ["verbinden…", "connecting…", "verbinde…", "conectando…", "a ligar…", "ferbine…"],
+  no_conn: ["geen verbinding — opnieuw proberen…", "no connection — retrying…", "keine Verbindung — neuer Versuch…", "sin conexión — reintentando…", "sem ligação — a tentar de novo…", "gjin ferbining — opnij besykje…"],
+  st_online: ["nu online", "online now", "jetzt online", "en línea", "online agora", "no online"],
+  st_driving: ["{0} rijdend", "{0} driving", "{0} fahrend", "{0} conduciendo", "{0} a conduzir", "{0} ridend"],
+  st_drivers: ["bestuurders", "drivers", "Fahrer", "conductores", "condutores", "bestjoerders"],
+  st_reports: ["meldingen", "reports", "Meldungen", "avisos", "avisos", "meldingen"],
+  st_official: ["officieel", "official", "offiziell", "oficial", "oficial", "offisjeel"],
+  st_works: ["{0} werk/maatregel", "{0} works/measures", "{0} Baustellen/Maßnahmen", "{0} obras/medidas", "{0} obras/medidas", "{0} wurk/maatregel"],
+  h_community: ["Van bestuurders", "From drivers", "Von Fahrern", "De conductores", "De condutores", "Fan bestjoerders"],
+  h_official: ["Officieel nu", "Official now", "Offiziell aktuell", "Oficial ahora", "Oficial agora", "Offisjeel no"],
+  h_works: ["Werkzaamheden & maatregelen", "Roadworks & measures", "Baustellen & Maßnahmen", "Obras y medidas", "Obras e medidas", "Wurksumheden & maatregels"],
+  h_layers: ["Op de kaart", "On the map", "Auf der Karte", "En el mapa", "No mapa", "Op de kaart"],
+  h_types: ["Soorten", "Types", "Arten", "Tipos", "Tipos", "Soarten"],
+  tap_filter: ["tik om te filteren", "tap to filter", "tippen zum Filtern", "toca para filtrar", "toque para filtrar", "tik om te filterjen"],
+  h_today: ["Vandaag", "Today", "Heute", "Hoy", "Hoje", "Hjoed"],
+  t_confirmed: ["bevestigd", "confirmed", "bestätigt", "confirmados", "confirmados", "befêstige"],
+  t_reported: ["gemeld", "reported", "gemeldet", "avisados", "reportados", "meld"],
+  t_votes: ["stemmen", "votes", "Stimmen", "votos", "votos", "stimmen"],
+  spark: ["meldingen per uur", "reports per hour", "Meldungen pro Stunde", "avisos por hora", "avisos por hora", "meldingen per oere"],
+  spark_aria: ["Meldingen per uur, laatste 24 uur", "Reports per hour, last 24 hours", "Meldungen pro Stunde, letzte 24 Stunden", "Avisos por hora, últimas 24 horas", "Avisos por hora, últimas 24 horas", "Meldingen per oere, lêste 24 oeren"],
+  spark_tip: ["{0}:00 — {1} meldingen", "{0}:00 — {1} reports", "{0}:00 — {1} Meldungen", "{0}:00 — {1} avisos", "{0}:00 — {1} avisos", "{0}:00 — {1} meldingen"],
+  now: ["nu", "now", "jetzt", "ahora", "agora", "no"],
+  foot: ["Posities van bestuurders worden nooit getoond of bewaard — alleen de plek van een melding. Officiële meldingen: open data van NDW (NL), Autobahn GmbH (DE), DGT (ES), Bison Futé (FR), stad Porto (PT), Mobility Brussels en GIPOD Vlaanderen (BE) en Digitraffic (FI). Plaatsnamen: PDOK. Camera's: OpenStreetMap. 3D-gebouwen in de app: 3D BAG (TU Delft, CC BY 4.0). Kaart © {osm}-bijdragers.",
+         "Drivers' positions are never shown or stored — only the location of a report. Official reports: open data from NDW (NL), Autobahn GmbH (DE), DGT (ES), Bison Futé (FR), City of Porto (PT), Mobility Brussels and GIPOD Flanders (BE) and Digitraffic (FI). Place names: PDOK. Cameras: OpenStreetMap. Map © {osm} contributors.",
+         "Positionen von Fahrern werden nie angezeigt oder gespeichert — nur der Ort einer Meldung. Offizielle Meldungen: Open Data von NDW (NL), Autobahn GmbH (DE), DGT (ES), Bison Futé (FR), Stadt Porto (PT), Mobility Brussels und GIPOD Flandern (BE) und Digitraffic (FI). Ortsnamen: PDOK. Kameras: OpenStreetMap. Karte © {osm}-Mitwirkende.",
+         "Nunca se muestran ni se guardan las posiciones de los conductores, solo el lugar de un aviso. Avisos oficiales: datos abiertos de NDW (NL), Autobahn GmbH (DE), DGT (ES), Bison Futé (FR), ciudad de Oporto (PT), Mobility Brussels y GIPOD Flandes (BE) y Digitraffic (FI). Nombres de lugares: PDOK. Cámaras: OpenStreetMap. Mapa © colaboradores de {osm}.",
+         "As posições dos condutores nunca são mostradas nem guardadas — apenas o local de um aviso. Avisos oficiais: dados abertos da NDW (NL), Autobahn GmbH (DE), DGT (ES), Bison Futé (FR), Câmara Municipal do Porto (PT), Mobility Brussels e GIPOD Flandres (BE) e Digitraffic (FI). Nomes de locais: PDOK. Câmaras: OpenStreetMap. Mapa © contribuidores do {osm}.",
+         "Posysjes fan bestjoerders wurde nea sjen litten of bewarre — allinnich it plak fan in melding. Offisjele meldingen: iepen data fan NDW (NL), Autobahn GmbH (DE), DGT (ES), Bison Futé (FR), stêd Porto (PT), Mobility Brussels en GIPOD Flaanderen (BE) en Digitraffic (FI). Plaknammen: PDOK. Kamera's: OpenStreetMap. Kaart © {osm}-bydragers."],
+  about: ["Over", "About", "Über", "Acerca de", "Sobre", "Oer"],
+  about_lead: ["Een open-source app voor in de auto die waarschuwt voor flitsers, files en gevaar — met open data en meldingen van andere bestuurders.",
+               "An open-source car app that warns about speed cameras, traffic jams and hazards — using open data and reports from other drivers.",
+               "Eine Open-Source-App fürs Auto, die vor Blitzern, Staus und Gefahren warnt — mit offenen Daten und Meldungen anderer Fahrer.",
+               "Una app de código abierto para el coche que avisa de radares, atascos y peligros, con datos abiertos y avisos de otros conductores.",
+               "Uma app de código aberto para o carro que avisa sobre radares, trânsito e perigos — com dados abertos e avisos de outros condutores.",
+               "In iepen-boarne-app foar yn 'e auto dy't warskôget foar flitsers, files en gefaar — mei iepen data en meldingen fan oare bestjoerders."],
+  step1: ["<b>Melden met één tik.</b> Zie je politie, een ongeval of een obstakel? Tik op MELD in de app.",
+          "<b>Report with one tap.</b> See police, an accident or an obstacle? Tap REPORT in the app.",
+          "<b>Melden mit einem Tipp.</b> Polizei, Unfall oder Hindernis gesehen? Tippe in der App auf MELDEN.",
+          "<b>Avisa con un toque.</b> ¿Ves policía, un accidente o un obstáculo? Toca AVISAR en la app.",
+          "<b>Reportar com um toque.</b> Vês polícia, um acidente ou um obstáculo? Toca em REPORTAR na app.",
+          "<b>Melde mei ien tik.</b> Sjochst plysje, in ûngelok of in obstakel? Tik op MELDE yn de app."],
+  step2: ["<b>Pas zichtbaar bij {n} meldingen.</b> Alleen telefoons die echt in de buurt reden tellen mee, zodat één persoon niets kan verzinnen.",
+          "<b>Only visible after {n} reports.</b> Only phones that were really driving nearby count, so one person can't make things up.",
+          "<b>Erst ab {n} Meldungen sichtbar.</b> Nur Handys, die wirklich in der Nähe gefahren sind, zählen — so kann niemand allein etwas erfinden.",
+          "<b>Visible solo con {n} avisos.</b> Solo cuentan los teléfonos que realmente circulaban cerca, así nadie puede inventarse nada.",
+          "<b>Só visível com {n} avisos.</b> Só contam telemóveis que estiveram mesmo a conduzir perto, para que ninguém invente nada sozinho.",
+          "<b>Pas sichtber by {n} meldingen.</b> Allinnich telefoans dy't echt yn de buert riden telle mei, sadat ien persoan neat fersinne kin."],
+  step3: ["<b>Nog steeds daar?</b> Wie langsrijdt krijgt de vraag in beeld en via de stem. Twee keer \"weg\" en de melding verdwijnt.",
+          "<b>Still there?</b> Drivers passing by get the question on screen and by voice. Two \"gone\" votes and the report disappears.",
+          "<b>Noch da?</b> Wer vorbeifährt, bekommt die Frage auf dem Bildschirm und per Sprache. Zweimal „weg“ und die Meldung verschwindet.",
+          "<b>¿Sigue ahí?</b> Quien pasa recibe la pregunta en pantalla y por voz. Dos votos de \"ya no\" y el aviso desaparece.",
+          "<b>Ainda lá?</b> Quem passa recebe a pergunta no ecrã e por voz. Dois votos \"já não\" e o aviso desaparece.",
+          "<b>Noch altyd dêr?</b> Wa't foarbyriidt kriget de fraach yn byld en fia de stim. Twa kear \"furt\" en de melding ferdwynt."],
+  step4: ["<b>Privacy.</b> Geen account, geen naam. Een willekeurig toestel-ID, versleuteld opgeslagen. Je route wordt nooit bewaard; voor de online-teller alleen een afgeronde positie, een paar minuten in het geheugen.",
+          "<b>Privacy.</b> No account, no name. A random device ID, stored encrypted. Your route is never stored; for the online counter only a rounded position, kept in memory for a few minutes.",
+          "<b>Datenschutz.</b> Kein Konto, kein Name. Eine zufällige Geräte-ID, verschlüsselt gespeichert. Deine Route wird nie gespeichert; für den Online-Zähler nur eine gerundete Position, wenige Minuten im Speicher.",
+          "<b>Privacidad.</b> Sin cuenta ni nombre. Un ID de dispositivo aleatorio, guardado cifrado. Tu ruta nunca se guarda; para el contador en línea solo una posición redondeada, unos minutos en memoria.",
+          "<b>Privacidade.</b> Sem conta, sem nome. Um ID de dispositivo aleatório, guardado cifrado. A tua rota nunca é guardada; para o contador online apenas uma posição arredondada, alguns minutos em memória.",
+          "<b>Privacy.</b> Gjin akkount, gjin namme. In willekeurige apparaat-ID, fersifere bewarre. Dyn rûte wurdt nea bewarre; foar de online-teller allinnich in ôfrûne posysje, in pear minuten yn it ûnthâld."],
+  close: ["Sluiten", "Close", "Schließen", "Cerrar", "Fechar", "Slute"],
+  locate: ["Naar mijn locatie", "Go to my location", "Zu meinem Standort", "Ir a mi ubicación", "Ir para a minha localização", "Nei myn lokaasje"],
+  home: ["Heel Nederland", "All of the Netherlands", "Ganz Niederlande", "Todos los Países Bajos", "Todos os Países Baixos", "Hiel Nederlân"],
+  zin: ["Inzoomen", "Zoom in", "Vergrößern", "Acercar", "Aproximar", "Ynzoomje"],
+  zout: ["Uitzoomen", "Zoom out", "Verkleinern", "Alejar", "Afastar", "Útzoomje"],
+  grab: ["Paneel groter of kleiner", "Panel larger or smaller", "Bereich größer oder kleiner", "Panel más grande o pequeño", "Painel maior ou menor", "Paniel grutter of lytser"],
+  language: ["Taal", "Language", "Sprache", "Idioma", "Idioma", "Taal"],
+  just_now: ["zojuist", "just now", "gerade eben", "ahora mismo", "agora mesmo", "krekt no"],
+  min_ago: ["{0} min geleden", "{0} min ago", "vor {0} Min.", "hace {0} min", "há {0} min", "{0} min lyn"],
+  h_ago: ["{0} uur geleden", "{0} h ago", "vor {0} Std.", "hace {0} h", "há {0} h", "{0} oere lyn"],
+  since: ["sinds {0}", "since {0}", "seit {0}", "desde {0}", "desde {0}", "sûnt {0}"],
+  until: ["tot {0}", "until {0}", "bis {0}", "hasta {0}", "até {0}", "oant {0}"],
+  current: ["actueel", "current", "aktuell", "actual", "atual", "aktueel"],
+  expires: ["verloopt over {0} min", "expires in {0} min", "läuft in {0} Min. ab", "caduca en {0} min", "expira em {0} min", "ferrint oer {0} min"],
+  times_rep: ["{0}× gemeld", "reported {0}×", "{0}× gemeldet", "avisado {0}×", "reportado {0}×", "{0}× meld"],
+  gone: ["{0}× \"weg\"", "{0}× \"gone\"", "{0}× „weg“", "{0}× \"ya no\"", "{0}× \"já não\"", "{0}× \"furt\""],
+  src_ndw: ["Bron: NDW (officieel)", "Source: NDW (official)", "Quelle: NDW (offiziell)", "Fuente: NDW (oficial)", "Fonte: NDW (oficial)", "Boarne: NDW (offisjeel)"],
+  src_osm: ["Bron: OpenStreetMap", "Source: OpenStreetMap", "Quelle: OpenStreetMap", "Fuente: OpenStreetMap", "Fonte: OpenStreetMap", "Boarne: OpenStreetMap"],
+  cam_nospeed: ["meet geen snelheid", "does not measure speed", "misst keine Geschwindigkeit", "no mide la velocidad", "não mede velocidade", "mjit gjin faasje"],
+  cam_fixed: ["vaste camera", "fixed camera", "feste Kamera", "cámara fija", "câmara fixa", "fêste kamera"],
+  n_current: ["{0} actueel", "{0} current", "{0} aktuell", "{0} actuales", "{0} atuais", "{0} aktueel"],
+  n_of: ["{0} van {1}", "{0} of {1}", "{0} von {1}", "{0} de {1}", "{0} de {1}", "{0} fan {1}"],
+  more_map: ["+ {0} meer op de kaart", "+ {0} more on the map", "+ {0} weitere auf der Karte", "+ {0} más en el mapa", "+ {0} mais no mapa", "+ {0} mear op de kaart"],
+  e_off: ["<b>Laag uitgezet</b>Zet \"{0}\" aan bij \"{1}\".", "<b>Layer turned off</b>Turn on \"{0}\" under \"{1}\".", "<b>Ebene ausgeblendet</b>Schalte „{0}“ unter „{1}“ ein.", "<b>Capa desactivada</b>Activa \"{0}\" en \"{1}\".", "<b>Camada desligada</b>Liga \"{0}\" em \"{1}\".", "<b>Laach útsetten</b>Set \"{0}\" oan by \"{1}\"."],
+  e_comm: ["<b>Nog geen bevestigde meldingen</b>Een melding verschijnt hier zodra {0} bestuurders hetzelfde melden.", "<b>No confirmed reports yet</b>A report appears here as soon as {0} drivers report the same thing.", "<b>Noch keine bestätigten Meldungen</b>Eine Meldung erscheint hier, sobald {0} Fahrer dasselbe melden.", "<b>Aún no hay avisos confirmados</b>Un aviso aparece aquí en cuanto {0} conductores avisan lo mismo.", "<b>Ainda sem avisos confirmados</b>Um aviso aparece aqui assim que {0} condutores reportam o mesmo.", "<b>Noch gjin befêstige meldingen</b>In melding ferskynt hjir sa gau't {0} bestjoerders itselde melde."],
+  e_filtered: ["<b>Alles weggefilterd</b>Tik op een soort hieronder om die weer te tonen.", "<b>Everything filtered out</b>Tap a type below to show it again.", "<b>Alles ausgefiltert</b>Tippe unten auf eine Art, um sie wieder anzuzeigen.", "<b>Todo filtrado</b>Toca un tipo abajo para mostrarlo de nuevo.", "<b>Tudo filtrado</b>Toca num tipo abaixo para o mostrar de novo.", "<b>Alles weifiltere</b>Tik hjirûnder op in soarte om dy wer sjen te litten."],
+  e_quiet: ["<div class=\"big\">🛣️</div><b>Alles rustig op de weg</b>Geen ongevallen, files of obstakels in beeld.", "<div class=\"big\">🛣️</div><b>All quiet on the road</b>No accidents, jams or obstacles in view.", "<div class=\"big\">🛣️</div><b>Alles ruhig auf der Straße</b>Keine Unfälle, Staus oder Hindernisse im Bild.", "<div class=\"big\">🛣️</div><b>Todo tranquilo en la carretera</b>Sin accidentes, atascos ni obstáculos en vista.", "<div class=\"big\">🛣️</div><b>Tudo calmo na estrada</b>Sem acidentes, trânsito ou obstáculos à vista.", "<div class=\"big\">🛣️</div><b>Alles rêstich op de dyk</b>Gjin ûngelokken, files of obstakels yn byld."],
+  e_works: ["<b>Geen werkzaamheden of maatregelen</b>Er is nu niets in beeld.", "<b>No roadworks or measures</b>Nothing in view right now.", "<b>Keine Baustellen oder Maßnahmen</b>Gerade nichts im Bild.", "<b>Sin obras ni medidas</b>No hay nada en vista ahora.", "<b>Sem obras nem medidas</b>Nada à vista agora.", "<b>Gjin wurksumheden of maatregels</b>Der is no neat yn byld."],
+  search_ph: ["Zoek een plaats of weg", "Search a place or road", "Ort oder Straße suchen", "Buscar lugar o carretera", "Procurar local ou estrada", "Sykje in plak of wei"],
+  list_btn: ["Lijsten tonen of verbergen", "Show or hide lists", "Listen ein-/ausblenden", "Mostrar u ocultar listas", "Mostrar ou ocultar listas", "Listen sjen litte of ferbergje"],
+  play: ["Afspelen", "Play", "Abspielen", "Reproducir", "Reproduzir", "Ofspylje"],
+  R_traffic: ["Verkeer", "Traffic", "Verkehr", "Tráfico", "Trânsito", "Ferkear"],
+  R_works: ["Werk", "Works", "Baustellen", "Obras", "Obras", "Wurk"],
+  R_cams: ["Flitsers", "Cameras", "Blitzer", "Radares", "Radares", "Flitsers"],
+  R_wx: ["Weer", "Warnings", "Warnungen", "Avisos", "Avisos", "Waar"],
+  R_radar: ["Radar", "Radar", "Radar", "Radar", "Radar", "Radar"],
+  R_sky: ["Heli's", "Helis", "Helis", "Helis", "Helis", "Heli's"],
+  R_sondes: ["Ballons", "Balloons", "Ballons", "Globos", "Balões", "Ballons"],
+  T_now: ["nu", "now", "jetzt", "ahora", "agora", "no"],
+  T_past: ["geweest", "past", "vorhin", "pasado", "passado", "west"],
+  T_fc: ["verwachting", "forecast", "Vorhersage", "previsión", "previsão", "ferwachting"],
+  T_here: ["Hier", "Here", "Hier", "Aquí", "Aqui", "Hjir"],
+  T_quiet: ["Niets bijzonders binnen een paar km.", "Nothing notable within a few km.", "Nichts Besonderes im Umkreis weniger km.", "Nada destacable a pocos km.", "Nada de especial a poucos km.", "Neat bysûnders binnen in pear km."],
+  T_dist: ["op {0}", "{0} away", "in {0}", "a {0}", "a {0}", "op {0}"],
+  T_more: ["+ {0} meer in de buurt", "+ {0} more nearby", "+ {0} weitere in der Nähe", "+ {0} más cerca", "+ {0} mais perto", "+ {0} mear yn 'e buert"],
+  h_sky: ["Lucht & weer", "Sky & weather", "Luft & Wetter", "Cielo y tiempo", "Céu e tempo", "Loft & waar"],
+  L_sky: ["Helikopters", "Helicopters", "Hubschrauber", "Helicópteros", "Helicópteros", "Helikopters"],
+  L_sondes: ["Weerballonnen", "Weather balloons", "Wetterballons", "Globos meteorológicos", "Balões meteorológicos", "Waarballonnen"],
+  L_wx: ["Weeralarm", "Weather warnings", "Unwetterwarnungen", "Avisos meteorológicos", "Avisos meteorológicos", "Waarwaarskôgingen"],
+  L_radar: ["Buienradar", "Rain radar", "Regenradar", "Radar de lluvia", "Radar de chuva", "Buienradar"],
+  H_politie: ["Politieheli", "Police helicopter", "Polizeihubschrauber", "Helicóptero policial", "Helicóptero da polícia", "Plysjeheli"],
+  H_kustwacht: ["Kustwacht / SAR", "Coastguard / SAR", "Küstenwache / SAR", "Guardacostas / SAR", "Guarda costeira / SAR", "Kustwacht / SAR"],
+  H_helikopter: ["Helikopter", "Helicopter", "Hubschrauber", "Helicóptero", "Helicóptero", "Helikopter"],
+  S_sonde: ["Weerballon", "Weather balloon", "Wetterballon", "Globo meteorológico", "Balão meteorológico", "Waarballon"],
+  S_up: ["stijgt {0} m/s", "rising {0} m/s", "steigt {0} m/s", "sube {0} m/s", "sobe {0} m/s", "stiget {0} m/s"],
+  S_down: ["daalt {0} m/s", "falling {0} m/s", "sinkt {0} m/s", "baja {0} m/s", "desce {0} m/s", "sakket {0} m/s"],
+  S_land: ["Verwachte landing: zie kruisje op de kaart", "Expected landing: see cross on the map", "Erwartete Landung: siehe Kreuz auf der Karte", "Aterrizaje previsto: ver la cruz en el mapa", "Aterragem prevista: ver a cruz no mapa", "Ferwachte lâning: sjoch krúske op de kaart"],
+  W_lvl2: ["Code geel", "Code yellow", "Warnstufe gelb", "Aviso amarillo", "Aviso amarelo", "Koade giel"],
+  W_lvl3: ["Code oranje", "Code orange", "Warnstufe orange", "Aviso naranja", "Aviso laranja", "Koade oranje"],
+  W_lvl4: ["Code rood", "Code red", "Warnstufe rot", "Aviso rojo", "Aviso vermelho", "Koade read"],
+  W_t1: ["Wind", "Wind", "Wind", "Viento", "Vento", "Wyn"],
+  W_t2: ["Sneeuw/gladheid", "Snow/ice", "Schnee/Glätte", "Nieve/hielo", "Neve/gelo", "Snie/glêdens"],
+  W_t3: ["Onweer", "Thunderstorms", "Gewitter", "Tormentas", "Trovoada", "Tongerwaar"],
+  W_t4: ["Mist", "Fog", "Nebel", "Niebla", "Nevoeiro", "Mist"],
+  W_t5: ["Hitte", "Heat", "Hitze", "Calor", "Calor", "Hjitte"],
+  W_t6: ["Kou", "Cold", "Kälte", "Frío", "Frio", "Kjeld"],
+  W_t7: ["Kust", "Coastal", "Küste", "Costa", "Costa", "Kust"],
+  W_t10: ["Regen", "Rain", "Regen", "Lluvia", "Chuva", "Rein"],
+  W_t12: ["Hoogwater", "Flooding", "Hochwasser", "Inundaciones", "Cheias", "Heechwetter"],
+  W_t13: ["Regen/hoogwater", "Rain/flooding", "Regen/Hochwasser", "Lluvia/inundaciones", "Chuva/cheias", "Rein/heechwetter"],
+  W_until: ["tot {0}", "until {0}", "bis {0}", "hasta {0}", "até {0}", "oant {0}"],
+  W_from: ["vanaf {0}", "from {0}", "ab {0}", "desde {0}", "a partir de {0}", "fan {0}"],
+  e_sky: ["<b>Rustig in de lucht</b>Geen weeralarm, traumaheli's of weerballonnen op dit moment.", "<b>Quiet skies</b>No weather warnings, air ambulances or weather balloons right now.", "<b>Ruhiger Himmel</b>Derzeit keine Unwetterwarnungen, Rettungshubschrauber oder Wetterballons.", "<b>Cielo tranquilo</b>Ahora no hay avisos, helicópteros sanitarios ni globos meteorológicos.", "<b>Céu tranquilo</b>Sem avisos, helicópteros médicos ou balões meteorológicos neste momento.", "<b>Rêstich yn 'e loft</b>Gjin waarwaarskôging, traumaheli's of waarballonnen op dit stuit."],
+  src_adsb: ["Bron: ADS-B via adsb.lol (ODbL)", "Source: ADS-B via adsb.lol (ODbL)", "Quelle: ADS-B über adsb.lol (ODbL)", "Fuente: ADS-B vía adsb.lol (ODbL)", "Fonte: ADS-B via adsb.lol (ODbL)", "Boarne: ADS-B fia adsb.lol (ODbL)"],
+  src_sonde: ["Bron: SondeHub", "Source: SondeHub", "Quelle: SondeHub", "Fuente: SondeHub", "Fonte: SondeHub", "Boarne: SondeHub"],
+  src_wx: ["Bron: KNMI via MeteoAlarm", "Source: KNMI via MeteoAlarm", "Quelle: KNMI über MeteoAlarm", "Fuente: KNMI vía MeteoAlarm", "Fonte: KNMI via MeteoAlarm", "Boarne: KNMI fia MeteoAlarm"],
+  L_community: ["Bestuurders", "Drivers", "Fahrer", "Conductores", "Condutores", "Bestjoerders"],
+  L_cams: ["Flitspalen", "Speed cameras", "Blitzer", "Radares", "Radares", "Flitspeallen"],
+  L_anpr: ["ANPR-camera's", "ANPR cameras", "Kennzeichenkameras", "Cámaras de matrículas", "Câmaras de matrículas", "ANPR-kamera's"],
+  L_official: ["Officieel", "Official", "Offiziell", "Oficial", "Oficial", "Offisjeel"],
+  L_works: ["Werkzaamheden", "Roadworks", "Baustellen", "Obras", "Obras", "Wurksumheden"],
+  L_info: ["Snelheden & omleidingen", "Speeds & diversions", "Tempolimits & Umleitungen", "Velocidades y desvíos", "Velocidades e desvios", "Faasjes & omliedingen"],
+  T1: ["Politie", "Police", "Polizei", "Policía", "Polícia", "Plysje"],
+  T2: ["Hulpdienst", "Emergency", "Rettungsdienst", "Emergencias", "Emergência", "Helptsjinst"],
+  T3: ["File", "Traffic jam", "Stau", "Atasco", "Trânsito", "File"],
+  T4: ["Ongeval", "Accident", "Unfall", "Accidente", "Acidente", "Ûngelok"],
+  T5: ["Werkzaamheden", "Roadworks", "Baustelle", "Obras", "Obras", "Wurksumheden"],
+  T6: ["Obstakel", "Obstacle", "Hindernis", "Obstáculo", "Obstáculo", "Obstakel"],
+  T7: ["Afsluiting", "Closure", "Sperrung", "Cierre", "Corte", "Ôfsluting"],
+  T8: ["Snelheid", "Speed limit", "Tempolimit", "Límite", "Limite", "Faasje"],
+  T9: ["Omleiding", "Diversion", "Umleitung", "Desvío", "Desvio", "Omlieding"],
+  T10: ["Weer", "Weather", "Wetter", "Tiempo", "Tempo", "Waar"],
+  T11: ["Brug open", "Bridge open", "Brücke offen", "Puente abierto", "Ponte aberta", "Brêge iepen"],
+  T12: ["Spookrijder", "Wrong-way driver", "Falschfahrer", "Conductor en sentido contrario", "Condutor em contramão", "Spoekrider"],
+  T13: ["Spitsstrook", "Peak-hour lane", "Seitenstreifen", "Carril adicional", "Faixa extra", "Spitsstrook"],
+  E_traumaheli: ["Traumaheli", "Air ambulance", "Rettungshubschrauber", "Helicóptero sanitario", "Helicóptero médico", "Traumaheli"],
+  C_F: ["Flitspaal", "Speed camera", "Blitzer", "Radar fijo", "Radar fixo", "Flitspeal"],
+  C_R: ["Roodlichtcamera", "Red-light camera", "Rotlichtblitzer", "Cámara de semáforo", "Radar de semáforo", "Readljochtkamera"],
+  C_A: ["Trajectcontrole", "Average speed check", "Abschnittskontrolle", "Tramo controlado", "Radar de velocidade média", "Trajektkontrôle"],
+  C_N: ["ANPR-camera", "ANPR camera", "Kennzeichenkamera", "Cámara de matrículas", "Câmara de matrículas", "ANPR-kamera"],
+  N_Ongeval: ["Ongeval", "Accident", "Unfall", "Accidente", "Acidente", "Ûngelok"],
+  N_File: ["File", "Traffic jam", "Stau", "Atasco", "Trânsito", "File"],
+  N_Spookrijder: ["Spookrijder", "Wrong-way driver", "Falschfahrer", "Conductor en sentido contrario", "Condutor em contramão", "Spoekrider"],
+  N_Pechgeval: ["Pechgeval", "Breakdown", "Panne", "Avería", "Avaria", "Pech"],
+  "N_Stilstaand voertuig": ["Stilstaand voertuig", "Stationary vehicle", "Liegengebliebenes Fahrzeug", "Vehículo detenido", "Veículo parado", "Stilsteand fiertúch"],
+  N_Obstakel: ["Obstakel", "Obstacle", "Hindernis", "Obstáculo", "Obstáculo", "Obstakel"],
+  "N_Brug open": ["Brug open", "Bridge open", "Brücke offen", "Puente abierto", "Ponte aberta", "Brêge iepen"],
+  "N_Weg dicht": ["Weg dicht", "Road closed", "Straße gesperrt", "Carretera cortada", "Estrada cortada", "Wei ticht"],
+  "N_Rijbaan dicht": ["Rijbaan dicht", "Carriageway closed", "Fahrbahn gesperrt", "Calzada cerrada", "Faixa de rodagem fechada", "Rydbaan ticht"],
+  "N_Rijstrook dicht": ["Rijstrook dicht", "Lane closed", "Fahrstreifen gesperrt", "Carril cerrado", "Faixa fechada", "Rydstrook ticht"],
+  "N_Versmalde rijstroken": ["Versmalde rijstroken", "Narrow lanes", "Verengte Fahrstreifen", "Carriles estrechos", "Faixas estreitas", "Fersmelle rydstroken"],
+  "N_Rijstroken verlegd": ["Rijstroken verlegd", "Lanes shifted", "Fahrstreifen verlegt", "Carriles desviados", "Faixas desviadas", "Rydstroken ferlein"],
+  "N_Aangepaste rijstrookindeling": ["Aangepaste rijstrookindeling", "Changed lane layout", "Geänderte Fahrstreifen", "Carriles modificados", "Faixas alteradas", "Oanpaste rydstroken"],
+  N_Wegwerkzaamheden: ["Wegwerkzaamheden", "Roadworks", "Baustelle", "Obras", "Obras na estrada", "Weiwurksumheden"],
+  N_Werkzaamheden: ["Werkzaamheden", "Roadworks", "Baustelle", "Obras", "Obras", "Wurksumheden"],
+  "N_Pijlwagen / werkvoertuig": ["Pijlwagen / werkvoertuig", "Signal truck / works vehicle", "Sicherungsfahrzeug", "Vehículo de señalización", "Veículo de sinalização", "Pylwein / wurkfiertúch"],
+  "N_Spitsstrook open": ["Spitsstrook open", "Peak-hour lane open", "Seitenstreifen freigegeben", "Carril adicional abierto", "Faixa extra aberta", "Spitsstrook iepen"],
+  N_Omleiding: ["Omleiding", "Diversion", "Umleitung", "Desvío", "Desvio", "Omlieding"],
+  "N_Slecht weer": ["Slecht weer", "Bad weather", "Schlechtes Wetter", "Mal tiempo", "Mau tempo", "Min waar"],
+  "N_Evenement / activiteit": ["Evenement / activiteit", "Event", "Veranstaltung", "Evento", "Evento", "Evenemint"],
+  "N_Snelheid aangepast": ["Snelheid aangepast", "Speed limit changed", "Tempolimit geändert", "Límite modificado", "Limite alterado", "Faasje oanpast"],
+  N_max: ["Max. {0} km/u", "Max. {0} km/h", "Max. {0} km/h", "Máx. {0} km/h", "Máx. {0} km/h", "Maks. {0} km/o"],
+  N_bridge_at: ["Brug open om {0}", "Bridge opens at {0}", "Brücke öffnet um {0}", "Puente abre a las {0}", "Ponte abre às {0}", "Brêge iepen om {0}"],
+  km_h: ["km/u", "km/h", "km/h", "km/h", "km/h", "km/o"],
+  app_tag: ["Flitspalen, meldingen en navigatie — voor het ronde DASH-scherm en je telefoon.", "Speed cameras, reports and navigation — for the round DASH screen and your phone.", "Blitzer, Meldungen und Navigation — für den runden DASH-Bildschirm und dein Handy.", "Radares, avisos y navegación, para la pantalla redonda DASH y tu móvil.", "Radares, avisos e navegação — para o ecrã redondo DASH e o teu telemóvel.", "Flitspeallen, meldingen en navigaasje — foar it rûne DASH-skerm en dyn telefoan."],
+  f_cams: ["Flitspalen & trajecten", "Cameras & average speed", "Blitzer & Abschnittskontrollen", "Radares y tramos", "Radares e troços", "Flitspeallen & trajekten"],
+  f_cams_d: ["Vaste flitspalen, roodlicht- en trajectcontroles, met afstand en je gemiddelde snelheid.", "Fixed, red-light and average speed cameras, with distance and your average speed.", "Feste Blitzer, Rotlicht- und Abschnittskontrollen, mit Abstand und Durchschnittstempo.", "Radares fijos, de semáforo y de tramo, con distancia y tu velocidad media.", "Radares fixos, de semáforo e de velocidade média, com distância e a tua média.", "Fêste flitspeallen, readljocht- en trajektkontrôles, mei ôfstân en dyn gemiddelde faasje."],
+  f_rep: ["Meldingen van bestuurders", "Reports from drivers", "Meldungen von Fahrern", "Avisos de conductores", "Avisos de condutores", "Meldingen fan bestjoerders"],
+  f_rep_d: ["Politie, ongevallen en obstakels — pas zichtbaar als {n} bestuurders hetzelfde melden.", "Police, accidents and obstacles — only shown once {n} drivers report the same.", "Polizei, Unfälle und Hindernisse — erst sichtbar, wenn {n} Fahrer dasselbe melden.", "Policía, accidentes y obstáculos: visibles solo cuando {n} conductores avisan lo mismo.", "Polícia, acidentes e obstáculos — só visíveis quando {n} condutores reportam o mesmo.", "Plysje, ûngelokken en obstakels — pas sichtber as {n} bestjoerders itselde melde."],
+  f_nav: ["Navigatie", "Navigation", "Navigation", "Navegación", "Navegação", "Navigaasje"],
+  f_nav_d: ["Zoek een adres of plek en rijd met gesproken aanwijzingen. Zonder tol, snelweg of veerpont kan ook.", "Search an address or place and drive with spoken directions. Avoid tolls, highways or ferries if you like.", "Adresse oder Ort suchen und mit Sprachansagen fahren. Auch ohne Maut, Autobahn oder Fähre.", "Busca una dirección o lugar y conduce con indicaciones por voz. También sin peajes, autopistas ni ferris.", "Procura uma morada ou local e conduz com indicações por voz. Também sem portagens, autoestradas ou ferries.", "Sykje in adres of plak en ryd mei sprutsen oanwizings. Sûnder tol, sneldyk of pont kin ek."],
+  f_live: ["Live verkeer", "Live traffic", "Verkehr live", "Tráfico en directo", "Trânsito ao vivo", "Live ferkear"],
+  f_live_d: ["Files, ongevallen, werkzaamheden en matrixborden uit officiële open data.", "Jams, accidents, roadworks and overhead signs from official open data.", "Staus, Unfälle, Baustellen und Schilderbrücken aus offiziellen offenen Daten.", "Atascos, accidentes, obras y paneles de carril a partir de datos abiertos oficiales.", "Filas, acidentes, obras e painéis de faixa a partir de dados abertos oficiais.", "Files, ûngelokken, wurksumheden en matrixboerden út offisjele iepen data."],
+  f_map: ["Offline kaart & limieten", "Offline map & limits", "Offline-Karte & Limits", "Mapa y límites sin conexión", "Mapa e limites offline", "Offline kaart & limiten"],
+  f_map_d: ["Wegenkaart en maximumsnelheden staan op je toestel en werken ook zonder bereik.", "Road map and speed limits live on your device and work without signal.", "Straßenkarte und Tempolimits liegen auf dem Gerät und funktionieren ohne Empfang.", "El mapa y los límites están en tu dispositivo y funcionan sin cobertura.", "O mapa e os limites ficam no teu aparelho e funcionam sem rede.", "Diekkaart en maksimumfaasjes steane op dyn apparaat en wurkje ek sûnder berik."],
+  f_dash: ["Rond scherm én telefoon", "Round screen and phone", "Runder Bildschirm und Handy", "Pantalla redonda y móvil", "Ecrã redondo e telemóvel", "Rûn skerm én telefoan"],
+  f_dash_d: ["Gemaakt voor het ronde DASH-scherm in de auto, met een eigen versie voor je telefoon.", "Made for the round DASH screen in the car, with its own version for your phone.", "Für den runden DASH-Bildschirm im Auto gemacht, mit eigener Version fürs Handy.", "Hecha para la pantalla redonda DASH del coche, con su propia versión para el móvil.", "Feita para o ecrã redondo DASH no carro, com versão própria para o telemóvel.", "Makke foar it rûne DASH-skerm yn de auto, mei in eigen ferzje foar dyn telefoan."],
+  f_data: ["Zuinig met data", "Light on data", "Datensparsam", "Ahorra datos", "Poupa dados", "Sunich mei data"],
+  f_data_d: ["Onderweg maar een paar kilobyte per update; grote downloads alleen via wifi.", "Only a few kilobytes per update on the road; big downloads over Wi-Fi only.", "Unterwegs nur wenige Kilobyte pro Update; große Downloads nur über WLAN.", "En ruta, solo unos kilobytes por actualización; descargas grandes solo con wifi.", "Na estrada, só alguns kilobytes por atualização; downloads grandes só por wi-fi.", "Underweis mar in pear kilobyte per fernijing; grutte downloads allinnich fia wifi."],
+  f_priv: ["Geen account", "No account", "Kein Konto", "Sin cuenta", "Sem conta", "Gjin akkount"],
+  f_priv_d: ["Geen naam, geen advertenties en je route wordt nooit bewaard.", "No name, no ads, and your route is never stored.", "Kein Name, keine Werbung, und deine Route wird nie gespeichert.", "Sin nombre ni anuncios, y tu ruta nunca se guarda.", "Sem nome, sem anúncios, e a tua rota nunca é guardada.", "Gjin namme, gjin advertinsjes en dyn rûte wurdt nea bewarre."],
+  store_soon: ["Binnenkort in Google Play", "Coming soon to Google Play", "Bald bei Google Play", "Próximamente en Google Play", "Em breve no Google Play", "Gau yn Google Play"],
+  store_sub: ["De telefoonversie komt in de Play Store; de DASH-versie wordt apart geïnstalleerd.", "The phone version is coming to the Play Store; the DASH version is installed separately.", "Die Handy-Version kommt in den Play Store; die DASH-Version wird separat installiert.", "La versión para móvil llegará a Play Store; la versión DASH se instala aparte.", "A versão para telemóvel chega à Play Store; a versão DASH é instalada à parte.", "De telefoanferzje komt yn de Play Store; de DASH-ferzje wurdt apart ynstallearre."],
+  app_btn: ["Over de app", "About the app", "Über die App", "Sobre la app", "Sobre a app", "Oer de app"],
+  app_round: ["Rond scherm", "Round screen", "Runder Bildschirm", "Pantalla redonda", "Ecrã redondo", "Rûn skerm"],
+  app_phone: ["Telefoon", "Phone", "Handy", "Teléfono", "Telemóvel", "Telefoan"],
+  app_mdash: ["Dashboard", "Dashboard", "Dashboard", "Panel", "Painel", "Dashboard"],
+  app_mmap: ["Kaart", "Map", "Karte", "Mapa", "Mapa", "Kaart"],
+  app_mnav: ["Navigatie", "Navigation", "Navigation", "Navegación", "Navegação", "Navigaasje"],
+  cap_dash: ["Snelheid, limiet en de eerstvolgende flitser in één oogopslag; bij een waarschuwing vult de ring zich.", "Speed, limit and the next camera at a glance; the ring fills up when a warning comes.", "Tempo, Limit und der nächste Blitzer auf einen Blick; bei einer Warnung füllt sich der Ring.", "Velocidad, límite y el próximo radar de un vistazo; el anillo se llena con cada aviso.", "Velocidade, limite e o próximo radar num relance; o anel enche-se com cada aviso.", "Faasje, limyt en de earstfolgjende flitser yn ien eachopslach; by in warskôging rint de ring fol."],
+  cap_map: ["Offline kaart met wat er voor je ligt: flitsers, werkzaamheden en pijlwagens, met de limiet ernaast.", "Offline map with what's ahead: cameras, roadworks and signal trucks, with the limit alongside.", "Offline-Karte mit allem, was vor dir liegt: Blitzer, Baustellen und Sicherungsfahrzeuge, mit Limit.", "Mapa sin conexión con lo que tienes delante: radares, obras y vehículos de señalización, con el límite.", "Mapa offline com o que está à frente: radares, obras e veículos de sinalização, com o limite.", "Offline kaart mei wat foar dy leit: flitsers, wurksumheden en pylweinen, mei de limyt derby."],
+  cap_navdash: ["Navigeren op het ronde scherm: de volgende afslag bovenin, de route op de kaart en je limiet eronder.", "Navigating on the round screen: next turn at the top, the route on the map and your limit below.", "Navigation auf dem runden Bildschirm: nächste Abbiegung oben, Route auf der Karte, Limit darunter.", "Navegación en la pantalla redonda: el próximo giro arriba, la ruta en el mapa y tu límite debajo.", "Navegação no ecrã redondo: a próxima viragem em cima, a rota no mapa e o limite em baixo.", "Navigearje op it rûne skerm: de folgjende ôfslach boppe, de rûte op de kaart en dyn limyt derûnder."],
+  cap_phone: ["Op de telefoon: de meter bovenin en daaronder alles wat er onderweg op je af komt.", "On the phone: the gauge at the top and everything coming up on your way below it.", "Auf dem Handy: oben der Tacho, darunter alles, was unterwegs auf dich zukommt.", "En el móvil: el velocímetro arriba y debajo todo lo que viene en tu camino.", "No telemóvel: o velocímetro em cima e por baixo tudo o que vem pela frente.", "Op de telefoan: de meter boppe en dêrûnder alles wat der ûnderweis op dy ôf komt."],
+  cap_phonemap: ["De kaart over het hele scherm, met een grote MELD-knop voor politie, ongevallen en obstakels.", "Full-screen map with a big REPORT button for police, accidents and obstacles.", "Vollbildkarte mit großer MELDEN-Taste für Polizei, Unfälle und Hindernisse.", "Mapa a pantalla completa con un gran botón AVISAR para policía, accidentes y obstáculos.", "Mapa em ecrã inteiro com um grande botão REPORTAR para polícia, acidentes e obstáculos.", "Kaart oer it hiele skerm, mei in grutte MELDE-knop foar plysje, ûngelokken en obstakels."],
+  cap_navphone: ["Navigatie op de telefoon met gesproken aanwijzingen, aankomsttijd en de limiet van de weg.", "Navigation on the phone with spoken directions, arrival time and the road's limit.", "Navigation auf dem Handy mit Sprachansagen, Ankunftszeit und Tempolimit der Straße.", "Navegación en el móvil con indicaciones por voz, hora de llegada y el límite de la vía.", "Navegação no telemóvel com indicações por voz, hora de chegada e o limite da estrada.", "Navigaasje op de telefoan mei sprutsen oanwizings, oankomsttiid en de limyt fan de dyk."],
+  app_mcar: ["Auto + 3D", "Car + 3D", "Auto + 3D", "Coche + 3D", "Carro + 3D", "Auto + 3D"],
+  cap_cardash: ["Auto-stand met 3D-gebouwen: laag achter de auto, alsof je zelf door de wijk rijdt.", "Car view with 3D buildings: low behind the car, as if you're driving through the neighbourhood.", "Auto-Ansicht mit 3D-Gebäuden: tief hinter dem Auto, als führst du selbst durchs Viertel.", "Vista de coche con edificios 3D: baja detrás del coche, como si condujeras por el barrio.", "Vista de carro com edifícios 3D: baixa atrás do carro, como se conduzisses pelo bairro.", "Auto-stân mei 3D-gebouwen: leech efter de auto, as rydsto sels troch de wyk."],
+  cap_carphone: ["Op de telefoon: navigeren tussen echte panden met hun hoogte uit 3D BAG.", "On the phone: navigating between real buildings with their heights from 3D BAG.", "Auf dem Handy: Navigation zwischen echten Gebäuden mit Höhen aus 3D BAG.", "En el móvil: navegación entre edificios reales con su altura de 3D BAG.", "No telemóvel: navegação entre edifícios reais com a altura do 3D BAG.", "Op de telefoan: navigearje tusken echte gebouwen mei harren hichte út 3D BAG."],
+  app_title: ["Zo ziet de app eruit", "This is what the app looks like", "So sieht die App aus", "Así es la app", "Assim é a app", "Sa sjocht de app der út"],
+};
+let lang = (() => {
+  const saved = localStorage.getItem("rp-lang");
+  if (LANGS.includes(saved)) return saved;
+  for (const l of navigator.languages || [navigator.language || "nl"]) {
+    const c = String(l).toLowerCase().slice(0, 2);
+    if (LANGS.includes(c)) return c;
+  }
+  return "nl";
+})();
+const li = () => LANGS.indexOf(lang);
+function tr(key, ...args) {
+  const v = TXT[key];
+  let s = v ? (v[li()] || v[0]) : key;
+  args.forEach((a, i) => { s = s.split("{" + i + "}").join(a); });
+  return s;
+}
+function trL(label) {
+  if (!label) return "";
+  let m = /^Max\. (\d+) km\/u$/.exec(label);
+  if (m) return tr("N_max", m[1]);
+  m = /^Brug open om (\d\d:\d\d)$/.exec(label);
+  if (m) return tr("N_bridge_at", m[1]);
+  return TXT["N_" + label] ? tr("N_" + label) : label;
+}
+function locale() { return LOCALES[li()]; }
+
+const PATHS = {"1": "M7 6.5h10l2.2 5H4.8z M7.8 7.6h8.4l1.4 3.1H6.4z M3 11.5h18a1.5 1.5 0 0 1 1.5 1.5v4.5a1 1 0 0 1-1 1h-19a1 1 0 0 1-1-1V13A1.5 1.5 0 0 1 3 11.5z M5.00 13.70a1.3 1.3 0 1 0 0 2.60a1.3 1.3 0 1 0 0 -2.60z M19.00 13.70a1.3 1.3 0 1 0 0 2.60a1.3 1.3 0 1 0 0 -2.60z M9 14.3h6v1.6H9z M3 18.5h3v2.2a.8.8 0 0 1-.8.8H3.8a.8.8 0 0 1-.8-.8z M18 18.5h3v2.2a.8.8 0 0 1-.8.8h-1.4a.8.8 0 0 1-.8-.8z M9 4.2h6a.8.8 0 0 1 .8.8v1.5H8.2V5a.8.8 0 0 1 .8-.8z M11.6 4.6h.8v1.5h-.8z", "2": "M3 5h12.5a1 1 0 0 1 1 1v2.5h2.9a1 1 0 0 1 .8.4l2.5 3.4a1 1 0 0 1 .2.6v2.7a1 1 0 0 1-1 1H2.5a1 1 0 0 1-1-1V6.5A1.5 1.5 0 0 1 3 5z M7.6 8h1.8v2.1h2.1v1.8H9.4V14H7.6v-2.1H5.5v-1.8h2.1z M17.3 9.7h2l1.7 2.4h-3.7z M6.00 16.60a1.8 1.8 0 1 0 0 3.60a1.8 1.8 0 1 0 0 -3.60z M6.00 17.70a0.7 0.7 0 1 0 0 1.40a0.7 0.7 0 1 0 0 -1.40z M18.00 16.60a1.8 1.8 0 1 0 0 3.60a1.8 1.8 0 1 0 0 -3.60z M18.00 17.70a0.7 0.7 0 1 0 0 1.40a0.7 0.7 0 1 0 0 -1.40z", "3": "M5.45 10.5h7.6l1.7 3.6H16a1 1 0 0 1 1 1v4a1 1 0 0 1-1 1h-1v1.1a.9.9 0 0 1-.9.9h-1.2a.9.9 0 0 1-.9-.9v-1.1H6.5v1.1a.9.9 0 0 1-.9.9H4.4a.9.9 0 0 1-.9-.9v-1.1h-1a1 1 0 0 1-1-1v-4a1 1 0 0 1 1-1h1.25z M6.1 11.6h6.3l1.1 2.5H5z M4.30 16.00a1.1 1.1 0 1 0 0 2.20a1.1 1.1 0 1 0 0 -2.20z M14.20 16.00a1.1 1.1 0 1 0 0 2.20a1.1 1.1 0 1 0 0 -2.20z M12.7 2.5h5.6l1.3 2.7h.6a.8.8 0 0 1 .8.8v2.9a.8.8 0 0 1-.8.8h-9.4a.8.8 0 0 1-.8-.8V6a.8.8 0 0 1 .8-.8h.6z M13.2 3.4h4.6l.9 1.8h-6.4z M11.60 6.80a0.7 0.7 0 1 0 0 1.40a0.7 0.7 0 1 0 0 -1.40z M19.40 6.80a0.7 0.7 0 1 0 0 1.40a0.7 0.7 0 1 0 0 -1.40z", "4": "M5.45 10.5h7.6l1.7 3.6H16a1 1 0 0 1 1 1v4a1 1 0 0 1-1 1h-1v1.1a.9.9 0 0 1-.9.9h-1.2a.9.9 0 0 1-.9-.9v-1.1H6.5v1.1a.9.9 0 0 1-.9.9H4.4a.9.9 0 0 1-.9-.9v-1.1h-1a1 1 0 0 1-1-1v-4a1 1 0 0 1 1-1h1.25z M6.1 11.6h6.3l1.1 2.5H5z M4.30 16.00a1.1 1.1 0 1 0 0 2.20a1.1 1.1 0 1 0 0 -2.20z M14.20 16.00a1.1 1.1 0 1 0 0 2.20a1.1 1.1 0 1 0 0 -2.20z M17.50 2.00 L18.27 4.65 L20.68 3.32 L19.35 5.73 L22.00 6.50 L19.35 7.27 L20.68 9.68 L18.27 8.35 L17.50 11.00 L16.73 8.35 L14.32 9.68 L15.65 7.27 L13.00 6.50 L15.65 5.73 L14.32 3.32 L16.73 4.65z", "5": "M11 2.5h2a.5.5 0 0 1 .48.36L14.8 7.2H9.2l1.32-4.34A.5.5 0 0 1 11 2.5z M8.57 9.4h6.86l1.2 4.2H7.37z M6.74 15.8h10.52l.97 3.4H5.77z M3 20h18a1 1 0 0 1 1 1v.5H2V21a1 1 0 0 1 1-1z", "6": "M12 2.5c.5 0 1 .27 1.3.75l8.4 15A1.5 1.5 0 0 1 20.4 20.5H3.6a1.5 1.5 0 0 1-1.3-2.25l8.4-15c.3-.48.8-.75 1.3-.75z M11 8.5h2l-.35 6.5h-1.3z M12.00 16.30a1.2 1.2 0 1 0 0 2.40a1.2 1.2 0 1 0 0 -2.40z", "7": "M12.00 2.00a10 10 0 1 0 0 20.00a10 10 0 1 0 0 -20.00z M5.5 10.3h13v3.4h-13z", "11": "M3 4h18v2H3z M4 6h1.6v11H4z M18.4 6H20v11h-1.6z M2 17h20v2H2z M2 20.6c1.5 0 1.5-1 3-1s1.5 1 3 1 1.5-1 3-1 1.5 1 3 1 1.5-1 3-1 1.5 1 3 1 1.5-1 2-1v1.4c-.5 0-.5 1-2 1s-1.5-1-3-1-1.5 1-3 1-1.5-1-3-1-1.5 1-3 1-1.5-1-3-1-1.5 1-3 1z", "12": "M5.4 21V9H2.5L7 3l4.5 6H8.6v12z M15.4 3v12h-2.9l4.5 6 4.5-6h-2.9V3z", "8": "M12.00 2.00a10 10 0 1 0 0 20.00a10 10 0 1 0 0 -20.00z M12.00 4.20a7.8 7.8 0 1 0 0 15.60a7.8 7.8 0 1 0 0 -15.60z M11 12.6l5.6-6 .9.8-5.4 6.3z M12.00 11.40a1.6 1.6 0 1 0 0 3.20a1.6 1.6 0 1 0 0 -3.20z", "9": "M5 21V11a5 5 0 0 1 5-5h6.2V3l5 4.5-5 4.5V9H10a2 2 0 0 0-2 2v10z", "10": "M7 15a4 4 0 0 1-.6-7.95A5.5 5.5 0 0 1 17 6.5a4.25 4.25 0 0 1 .5 8.5z M8 17.3l1.2 2.2a1.35 1.35 0 1 1-2.4 0z M14 17.3l1.2 2.2a1.35 1.35 0 1 1-2.4 0z", "13": "M4 2h16a2 2 0 0 1 2 2v16a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2z M4 3.6h16a.4.4 0 0 1 .4.4v16a.4.4 0 0 1-.4.4H4a.4.4 0 0 1-.4-.4V4a.4.4 0 0 1 .4-.4z M6.4 4.6L12 10.2l5.6-5.6 1.8 1.8L13.8 12l5.6 5.6-1.8 1.8L12 13.8l-5.6 5.6-1.8-1.8L10.2 12 4.6 6.4z", "heli": "M2 4.6h20V6H2z M11.3 6h1.4v2.2h-1.4z M9 8.2h5.5a4.5 4.5 0 0 1 4.5 4.5v.3a3 3 0 0 1-3 3H9.5A4.5 4.5 0 0 1 5 11.5v0a3.3 3.3 0 0 1 4-3.3z M9.6 9.6v2.9h4.9a3 3 0 0 0-2.6-2.9z M18.5 11.6h3.5V13h-3.5z M20.8 9h1.4v5.6h-1.4z M8.5 16v2.4H7v1.4h10v-1.4h-1.5V16h-1.4v2.4H9.9V16z", "sonde": "M12 2a6.2 6.2 0 0 1 6.2 6.2c0 3.7-3.5 6.8-5.4 8.2h-1.6C9.3 15 5.8 11.9 5.8 8.2A6.2 6.2 0 0 1 12 2z M11.3 16.4h1.4v2.6h-1.4z M9.6 19h4.8v3H9.6z", "fire": "M12 2.5c.8 3 4.6 5 4.6 9.9a4.6 4.6 0 0 1-9.2 0c0-2.2 1.1-3.7 2.3-4.8.1 1.8.9 2.9 2 3.2-.6-3 .2-5.8.3-8.3z", "camF": "M7.6 2h8.8A1.6 1.6 0 0 1 18 3.6v8.8a1.6 1.6 0 0 1-1.6 1.6H7.6A1.6 1.6 0 0 1 6 12.4V3.6A1.6 1.6 0 0 1 7.6 2z M12.00 3.60a2.7 2.7 0 1 0 0 5.40a2.7 2.7 0 1 0 0 -5.40z M12.00 5.00a1.3 1.3 0 1 0 0 2.60a1.3 1.3 0 1 0 0 -2.60z M8.2 10h7.6a.6.6 0 0 1 .6.6v.9a.6.6 0 0 1-.6.6H8.2a.6.6 0 0 1-.6-.6v-.9a.6.6 0 0 1 .6-.6z M11 14h2v7h-2z M8.9 21h6.2a.9.9 0 0 1 .9.9v.6H8v-.6a.9.9 0 0 1 .9-.9z", "camA": "M2 3h20v2H2z M2 5h1.6v16H2z M20.4 5H22v16h-1.6z M7.5 5h.9v1.5h-.9z M5.6 6.5h4.5a.8.8 0 0 1 .8.8v2.4a.8.8 0 0 1-.8.8h-4.5a.8.8 0 0 1-.8-.8V7.3a.8.8 0 0 1 .8-.8z M7.80 7.50a1.0 1.0 0 1 0 0 2.00a1.0 1.0 0 1 0 0 -2.00z M15.9 5h.9v1.5h-.9z M14.0 6.5h4.5a.8.8 0 0 1 .8.8v2.4a.8.8 0 0 1-.8.8h-4.5a.8.8 0 0 1-.8-.8V7.3a.8.8 0 0 1 .8-.8z M16.20 7.50a1.0 1.0 0 1 0 0 2.00a1.0 1.0 0 1 0 0 -2.00z M5 15.5h10.5v-2l4 3-4 3v-2H5z", "camN": "M4 3.5h11l3.2 2v3.5L15 11H4a1 1 0 0 1-1-1V4.5a1 1 0 0 1 1-1z M15.20 6.15a1.1 1.1 0 1 0 0 2.20a1.1 1.1 0 1 0 0 -2.20z M8 11h1.6v3H8z M4.2 14h15.6a1.2 1.2 0 0 1 1.2 1.2v4.6a1.2 1.2 0 0 1-1.2 1.2H4.2A1.2 1.2 0 0 1 3 19.8v-4.6A1.2 1.2 0 0 1 4.2 14z M4.4 15.3h15.2v4.4H4.4z M6 16.3h3v2.4H6z M10.5 16.3h3v2.4h-3z M15 16.3h3v2.4h-3z"};
+const kind = (key, o) => Object.defineProperty(o, "label", { get: () => tr(key), enumerable: true });
+const TYPES = {};
+[[1, "#4c8dff"], [2, "#e0a800"], [3, "#ff7a00"], [4, "#ff4a3d"], [5, "#ffb020"], [6, "#22c7a9"], [7, "#e5484d"],
+ [8, "#35a8e0"], [9, "#9b7bff"], [10, "#4fc3b9"], [11, "#b07cff"], [12, "#ff2d55"], [13, "#2ecc71"]]
+  .forEach(([k, col]) => { TYPES[k] = kind("T" + k, { col }); });
+const COMMUNITY_TYPES = [1, 2, 3, 4, 5, 6];
+const CAM = {
+  F: kind("C_F", { col: "#ff3b30", path: "camF" }), R: kind("C_R", { col: "#ff9500", path: "camF" }),
+  A: kind("C_A", { col: "#af52de", path: "camA" }), N: kind("C_N", { col: "#8e8e93", path: "camN" }),
+};
+let camData = [];
+const URGENCY = { 12: 0, 4: 1, 3: 2, 7: 3, 6: 4, 11: 5, 5: 6, 8: 7, 9: 8, 13: 9, 10: 10 };
+const layersOn = Object.assign({ community: true, sky: true, wx: true, sondes: true, radar: false, cams: true, anpr: false, official: true, works: true, info: true },
+  JSON.parse(localStorage.getItem("rp-layers2") || "{}"));
+const REFRESH = 30000;
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+
+function icon(type, square) {
+  const t = TYPES[type] || { col: "#888" };
+  const bg = square
+    ? `<rect x="1.5" y="1.5" width="37" height="37" rx="10" fill="${t.col}" stroke="#fff" stroke-width="3"/>`
+    : `<circle cx="20" cy="20" r="18.5" fill="${t.col}" stroke="#fff" stroke-width="3"/>`;
+  return `<svg class="ic" viewBox="0 0 40 40" aria-hidden="true">${bg}
+    <g transform="translate(9 9) scale(.9166)"><path fill="#fff" fill-rule="evenodd" d="${PATHS[type] || ""}"/></g></svg>`;
+}
+const SRC = { NL: "NDW", DE: "Autobahn", ES: "DGT", FI: "Digitraffic", FR: "Bison Futé", PT: "Porto", BE: "BE" };
+const srcBE = o => /Brussel$/.test(o.place || "") ? "Brussels" : "GIPOD";
+const srcOf = o => o.cc === "BE" ? srcBE(o) : (SRC[o.cc || "NL"] || o.cc);
+function hhmm(ms) { return new Date(ms).toLocaleTimeString(locale(), { hour: "2-digit", minute: "2-digit" }); }
+function ago(ms) {
+  const m = Math.max(0, Math.round((Date.now() - ms) / 60000));
+  if (m < 1) return tr("just_now");
+  if (m < 60) return tr("min_ago", m);
+  return tr("h_ago", Math.floor(m / 60));
+}
+function countTo(el, v) {
+  const from = parseInt(el.textContent, 10);
+  if (isNaN(from) || from === v) { el.textContent = v; return; }
+  const t0 = performance.now(), d = 600;
+  (function step(t) {
+    const p = Math.min(1, (t - t0) / d), e = 1 - Math.pow(1 - p, 3);
+    el.textContent = Math.round(from + (v - from) * e);
+    if (p < 1) requestAnimationFrame(step);
+  })(t0);
+}
+
+const map = L.map("map", { zoomControl: false, zoomSnap: 0.25, preferCanvas: true });
+const darkQ = matchMedia("(prefers-color-scheme: dark)");
+const OFM = () => "https://tiles.openfreemap.org/styles/" + (darkQ.matches ? "fiord" : "positron");
+const OSM_ATTR = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>';
+const hasGL = (() => { try { const c = document.createElement("canvas"); return !!(c.getContext("webgl2") || c.getContext("webgl")); } catch (e) { return false; } })();
+let glBase = null;
+function rasterBase() {
+  L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", { maxZoom: 19, className: "rbase", attribution: OSM_ATTR }).addTo(map);
+}
+if (hasGL && window.maplibregl && L.maplibreGL) {
+  try {
+    glBase = L.maplibreGL({ style: OFM(), attributionControl: false }).addTo(map);
+    map.attributionControl.addAttribution('<a href="https://openfreemap.org" target="_blank" rel="noopener">OpenFreeMap</a> &copy; <a href="https://www.openmaptiles.org/" target="_blank" rel="noopener">OpenMapTiles</a> ' + OSM_ATTR);
+    darkQ.addEventListener("change", () => glBase.getMaplibreMap().setStyle(OFM()));
+    (function hook() {
+      const gm = glBase && glBase.getMaplibreMap();
+      if (!gm) return setTimeout(hook, 100);
+      gm.on("style.load", glLabels);
+      gm.once("idle", glLabels);
+    })();
+  } catch (e) { console.warn("vectorkaart niet beschikbaar", e); if (glBase) map.removeLayer(glBase); glBase = null; rasterBase(); }
+} else rasterBase();
+function glLabels() {
+  const gm = glBase && glBase.getMaplibreMap();
+  if (!gm || !gm.isStyleLoaded()) return;
+  const field = ["coalesce", ["get", "name:" + lang], ["get", "name"]];
+  gm.getStyle().layers.forEach(l => {
+    if (l.type === "symbol" && l.layout && l.layout["text-field"] && !/shield|ref|housenum/.test(l.id))
+      try { gm.setLayoutProperty(l.id, "text-field", field); } catch (e) {}
+  });
+}
+const narrow = () => innerWidth <= 720;
+function fitNL() {
+  map.fitBounds([[50.75, 3.36], [53.55, 7.22]], narrow()
+    ? { paddingTopLeft: [10, 128], paddingBottomRight: [56, 190] }
+    : { paddingTopLeft: [412, 20], paddingBottomRight: [70, 20] });
+}
+function fromHash() {
+  const m = /^#(-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?),(\d+(?:\.\d+)?)z/.exec(location.hash);
+  if (!m) return false;
+  map.setView([+m[1], +m[2]], Math.min(19, Math.max(3, +m[3])));
+  return true;
+}
+if (!fromHash()) fitNL();
+let hashTimer = 0;
+map.on("moveend", () => {
+  clearTimeout(hashTimer);
+  hashTimer = setTimeout(() => {
+    const c = map.getCenter(), z = map.getZoom();
+    history.replaceState(null, "", `#${c.lat.toFixed(4)},${c.lng.toFixed(4)},${+z.toFixed(2)}z`);
+  }, 400);
+});
+addEventListener("hashchange", fromHash);
+$("home").onclick = fitNL;
+$("europe").onclick = () => map.fitBounds([[36, -10], [70, 31]], narrow()
+  ? { paddingTopLeft: [10, 10], paddingBottomRight: [10, Math.round(innerHeight * 0.5)] }
+  : { paddingTopLeft: [392, 20], paddingBottomRight: [70, 20] });
+$("zin").onclick = () => map.zoomIn();
+$("zout").onclick = () => map.zoomOut();
+let meMarker;
+$("locate").onclick = () => {
+  if (!navigator.geolocation) return;
+  navigator.geolocation.getCurrentPosition(p => {
+    const ll = [p.coords.latitude, p.coords.longitude];
+    if (!meMarker) meMarker = L.marker(ll, { icon: L.divIcon({ className: "", html: '<div class="me"></div>', iconSize: [18, 18] }) }).addTo(map);
+    meMarker.setLatLng(ll);
+    map.flyTo(ll, 12, { duration: .8 });
+  }, () => {}, { enableHighAccuracy: false, timeout: 8000 });
+};
+
+const olayer = L.layerGroup().addTo(map);
+const clayer = L.layerGroup().addTo(map);
+const layer = L.layerGroup().addTo(map);
+const markers = new Map();
+const omarkers = new Map();
+let official = { items: [] }, oknown = null;
+const hidden = new Set(JSON.parse(localStorage.getItem("rp-hidden") || "[]"));
+let data = { reports: [] }, known = null;
+
+function pinFor(m) {
+  const fresh = Date.now() - m.created < 5 * 60000;
+  return L.divIcon({ className: "", iconSize: [42, 42], iconAnchor: [21, 21], popupAnchor: [0, -20],
+    html: `<div class="pin${fresh ? " fresh" : ""}" style="--col:${(TYPES[m.type] || {}).col}">${icon(m.type)}${m.count > 1 ? `<span class="n">${m.count}×</span>` : ""}</div>` });
+}
+function popupFor(m) {
+  const t = TYPES[m.type] || {};
+  const exp = Math.max(0, Math.round((m.expires - Date.now()) / 60000));
+  return `<div class="pop">${icon(m.type)}<div><div class="t">${esc(t.label || m.label)}</div>${m.place ? `<div class="p">${esc(m.place)}</div>` : ""}
+    <div class="s">${tr("times_rep", m.count)} · ${ago(m.created)}${m.gone ? " · " + tr("gone", m.gone) : ""}</div><div class="s">${tr("expires", exp)}</div></div></div>`;
+}
+function focus(m) {
+  map.flyTo([m.lat, m.lon], 14, { duration: .8 });
+  const mk = m.id == null ? null : markers.get(m.id);
+  if (mk) setTimeout(() => mk.openPopup(), 850);
+  if (narrow()) $("panel").classList.add("small");
+}
+
+function toast(m) {
+  const t = TYPES[m.type] || {};
+  const el = document.createElement("div");
+  el.className = "toast glass";
+  el.innerHTML = `${icon(m.type, m.official)}<span><b>${esc(m.official ? trL(m.label) : (t.label || m.label))}</b>${m.place ? " · " + esc(m.place) : ""}${m.official ? ' <span class="src">NDW</span>' : ""}</span>`;
+  el.onclick = () => focus(m);
+  $("toasts").prepend(el);
+  setTimeout(() => el.remove(), 6200);
+  while ($("toasts").children.length > 3) $("toasts").lastChild.remove();
+}
+
+function render() {
+  const all = data.reports;
+  const vis = layersOn.community ? all.filter(m => !hidden.has(m.type)) : [];
+  countTo($("online"), data.online ?? 0);
+  $("drivingSub").textContent = tr("st_driving", data.driving ?? 0);
+  countTo($("count"), all.length);
+  if (needed !== (data.needed ?? 3)) { needed = data.needed ?? 3; applyI18n(); }
+
+  const per = {};
+  all.forEach(m => per[m.type] = (per[m.type] || 0) + 1);
+  officialVisible(true).forEach(o => per[o.type] = (per[o.type] || 0) + 1);
+  $("legend").replaceChildren(...Object.entries(TYPES).map(([k, t]) => {
+    const el = document.createElement("button");
+    el.className = "chip" + (hidden.has(+k) ? " off" : "");
+    el.setAttribute("aria-pressed", String(!hidden.has(+k)));
+    el.innerHTML = `${icon(+k)}<span>${t.label}</span><span class="c">${per[k] || 0}</span>`;
+    el.onclick = () => {
+      hidden.has(+k) ? hidden.delete(+k) : hidden.add(+k);
+      localStorage.setItem("rp-hidden", JSON.stringify([...hidden]));
+      render();
+    };
+    return el;
+  }));
+
+  const seen = new Set();
+  vis.forEach(m => {
+    seen.add(m.id);
+    let mk = markers.get(m.id);
+    if (!mk) { mk = L.marker([m.lat, m.lon]).addTo(layer); markers.set(m.id, mk); }
+    mk.setLatLng([m.lat, m.lon]).setIcon(pinFor(m));
+    if (mk.getPopup()) mk.setPopupContent(popupFor(m)); else mk.bindPopup(popupFor(m));
+  });
+  for (const [id, mk] of markers) if (!seen.has(id)) { layer.removeLayer(mk); markers.delete(id); }
+
+  const list = $("list");
+  const sorted = [...vis].sort((a, b) => b.created - a.created).slice(0, 40);
+  $("listInfo").textContent = hidden.size && all.length ? tr("n_of", vis.length, all.length) : "";
+  renderOfficial();
+  renderLayers();
+  if (!sorted.length) {
+    list.innerHTML = `<div class="empty">${!layersOn.community ? tr("e_off", tr("L_community"), tr("h_layers"))
+      : all.length ? tr("e_filtered") : tr("e_comm", data.needed ?? 3)}</div>`;
+    return;
+  }
+  list.replaceChildren(...sorted.map(m => {
+    const t = TYPES[m.type] || {};
+    const life = Math.max(0, Math.min(1, (m.expires - Date.now()) / Math.max(1, m.expires - m.created)));
+    const b = document.createElement("button");
+    b.className = "item" + (known && !known.has(m.id) ? " new" : "");
+    b.style.setProperty("--col", t.col || "#888");
+    b.innerHTML = `${icon(m.type)}<div class="mid"><div class="t">${esc(t.label || m.label)}</div>
+      ${m.place ? `<div class="p">${esc(m.place)}</div>` : ""}<div class="s">${ago(m.created)}${m.gone ? " · " + tr("gone", m.gone) : ""}</div></div>
+      <span class="badge">${m.count}×</span><i class="life" style="width:${(life * 100).toFixed(1)}%"></i>`;
+    b.onclick = () => focus(m);
+    return b;
+  }));
+}
+
+function catOn(c) { return c === "urgent" ? layersOn.official : c === "works" ? layersOn.works : layersOn.info; }
+function officialVisible(ignoreFilter) {
+  return official.items.filter(o => catOn(o.cat) && (ignoreFilter || !hidden.has(o.type)));
+}
+function opopup(o) {
+  const t = TYPES[o.type] || {};
+  const when = [o.start ? tr("since", hhmm(o.start)) : "", o.end ? tr("until", hhmm(o.end)) : ""].filter(Boolean).join(" · ");
+  return `<div class="pop">${icon(o.type, true)}<div><div class="t">${esc(trL(o.label))}${o.detail ? " · " + esc(o.detail) : ""}</div>
+    ${o.place ? `<div class="p">${esc(o.place)}</div>` : ""}<div class="s">${when || tr("current")}</div><div class="s">${tr("src_off", srcOf(o))}</div></div></div>`;
+}
+const DETAIL_ZOOM = 10;
+function oIcon(o) {
+  if (map.getZoom() < DETAIL_ZOOM)
+    return L.divIcon({ className: "", iconSize: [12, 12], iconAnchor: [6, 6], popupAnchor: [0, -6],
+      html: `<div class="odot" style="background:${(TYPES[o.type] || {}).col}"></div>` });
+  return L.divIcon({ className: "", iconSize: [32, 32], iconAnchor: [16, 16], popupAnchor: [0, -16],
+    html: `<div class="opin">${icon(o.type, true)}${o.cc && o.cc !== "NL" ? `<span class="tag">${esc(o.cc)}</span>` : ""}</div>` });
+}
+let lastDetail = null;
+map.on("zoomend", () => {
+  const z = map.getZoom(), d = Math.round(z * 4);
+  if (d === lastDetail) return;
+  lastDetail = d;
+  drawOfficial(officialVisible(false));
+});
+const MAJOR = new Set([12, 4, 7, 3]);
+function drawOfficial(vis) {
+  olayer.clearLayers();
+  omarkers.clear();
+  const z = map.getZoom(), detail = z >= DETAIL_ZOOM;
+  if (z < 9) vis = vis.filter(o => o.cat === "urgent" && (z >= 7.5 || MAJOR.has(o.type)));
+  const clustered = new Set();
+  if (z < 15) {
+    const G = detail ? 46 : 20, cells = new Map();
+    vis.forEach(o => {
+      if (o.cat === "info" && o.line.length > 1) return;
+      const pt = map.project([o.lat, o.lon], z), k = Math.floor(pt.x / G) + ":" + Math.floor(pt.y / G);
+      (cells.get(k) || cells.set(k, []).get(k)).push(o);
+    });
+    cells.forEach(g => {
+      if (g.length < 2) return;
+      g.forEach(o => clustered.add(o.id));
+      const top = g.slice().sort((a, b) => (URGENCY[a.type] ?? 99) - (URGENCY[b.type] ?? 99))[0];
+      const col = (TYPES[top.type] || {}).col || "#888";
+      const lat = g.reduce((a, o) => a + o.lat, 0) / g.length, lon = g.reduce((a, o) => a + o.lon, 0) / g.length;
+      const d = detail ? 34 : 22;
+      L.marker([lat, lon], { zIndexOffset: -400, icon: L.divIcon({ className: "", iconSize: [d, d], iconAnchor: [d / 2, d / 2],
+        html: `<div class="clu" style="--col:${col};width:${d}px;height:${d}px;font-size:${detail ? 13 : 10.5}px">${g.length}</div>` }) })
+        .on("click", () => map.flyToBounds(L.latLngBounds(g.map(o => [o.lat, o.lon])).pad(0.6), { maxZoom: Math.min(16, z + 3), duration: .6 }))
+        .addTo(olayer);
+    });
+  }
+  vis.forEach(o => {
+    const col = (TYPES[o.type] || {}).col;
+    const lineOnly = o.cat === "info" && o.line.length > 1;
+    const g = { m: null, l: null };
+    if (o.line.length > 1)
+      g.l = L.polyline(o.line, { color: col, weight: lineOnly ? 6 : (detail ? 5 : 3), opacity: .8, lineCap: "round" })
+        .bindPopup(() => opopup(o)).addTo(olayer);
+    if (!lineOnly && !clustered.has(o.id)) {
+      g.m = detail
+        ? L.marker([o.lat, o.lon], { icon: oIcon(o), zIndexOffset: -500 })
+        : L.circleMarker([o.lat, o.lon], { radius: z < 7.5 ? 3.2 : 4, color: "#fff", weight: 1.2, fillColor: col, fillOpacity: 1 });
+      g.m.bindPopup(() => opopup(o)).addTo(olayer);
+    }
+    omarkers.set(o.id, g);
+  });
+  if (pendingOpen && omarkers.has(pendingOpen)) {
+    const g = omarkers.get(pendingOpen), o = vis.find(x => x.id === pendingOpen);
+    pendingOpen = null;
+    if (g.m) g.m.openPopup();
+    else if (g.l && o) g.l.openPopup([o.lat, o.lon]);
+    else if (o) L.popup().setLatLng([o.lat, o.lon]).setContent(opopup(o)).openOn(map);
+  }
+}
+let pendingOpen = null;
+function renderOfficial() {
+  const vis = officialVisible(false);
+  countTo($("ocount"), official.items.filter(o => o.cat === "urgent").length);
+  $("wcountSub").textContent = tr("st_works", official.items.filter(o => o.cat !== "urgent").length)
+    + " · " + tr("n_current", official.items.filter(o => o.cat === "urgent").length);
+  drawOfficial(vis);
+
+  officialList($("olist"), $("oInfo"), vis.filter(o => o.cat === "urgent"), layersOn.official, tr("L_official"),
+    `<div class="empty">${tr("e_quiet")}</div>`, 12);
+  officialList($("wlist"), $("wInfo"), vis.filter(o => o.cat !== "urgent"), layersOn.works || layersOn.info, tr("L_works"),
+    `<div class="empty">${tr("e_works")}</div>`, 15);
+}
+function officialList(ol, info, items, on, layerName, emptyHtml, max) {
+  const groups = new Map();
+  items.forEach(o => {
+    const k = o.place ? `${o.type}|${o.label}|${o.place}` : o.id;
+    const g = groups.get(k);
+    if (g) { g.n++; if ((o.start || 0) > (g.o.start || 0)) g.o = o; } else groups.set(k, { o, n: 1 });
+  });
+  const rows = [...groups.values()]
+    .sort((a, b) => (URGENCY[a.o.type] ?? 99) - (URGENCY[b.o.type] ?? 99) || (b.o.start || 0) - (a.o.start || 0));
+  info.textContent = items.length ? tr("n_view", items.length) : "";
+  if (!on) { ol.innerHTML = `<div class="empty">${tr("e_off", layerName, tr("h_layers"))}</div>`; return; }
+  if (!rows.length) { ol.innerHTML = emptyHtml; return; }
+  const more = rows.length - max;
+  ol.replaceChildren(...rows.slice(0, max).map(({ o, n }) => {
+    const b = document.createElement("button");
+    b.className = "item" + (oknown && !oknown.has(o.id) ? " new" : "");
+    const when = o.start ? tr("since", hhmm(o.start)) : tr("current");
+    b.innerHTML = `${icon(o.type, true)}<div class="mid"><div class="t">${esc(trL(o.label))}${o.detail ? " · " + esc(o.detail) : ""}${n > 1 ? ` <span class="cnt">${n}×</span>` : ""}</div>
+      ${o.place ? `<div class="p">${esc(o.place)}</div>` : ""}<div class="s">${when}</div></div><span class="src">${esc(srcOf(o))}</span>`;
+    b.onclick = () => {
+      map.flyTo([o.lat, o.lon], 14, { duration: .8 });
+      pendingOpen = o.id;
+      if (narrow()) $("panel").classList.add("small");
+    };
+    return b;
+  }), ...(more > 0 ? [Object.assign(document.createElement("div"), { className: "empty", textContent: tr("more_map", more) })] : []));
+}
+let skyData = { helis: [], sondes: [], wx: [] }, radarTime = 0;
+const wxLayer = L.layerGroup();
+const skyLayer = L.layerGroup();
+const HELI = {
+  traumaheli: { key: "E_traumaheli", col: "#ff2d55" }, politie: { key: "H_politie", col: "#4c8dff" },
+  kustwacht: { key: "H_kustwacht", col: "#ff9500" }, helikopter: { key: "H_helikopter", col: "#8e8e93" },
+};
+const WXCOL = { 2: "#ffd60a", 3: "#ff9f0a", 4: "#ff3b30" };
+const HELI_ORDER = { traumaheli: 0, politie: 1, kustwacht: 2, helikopter: 3 };
+function svgIc(col, path, square) {
+  const bg = square ? `<rect x="1.5" y="1.5" width="37" height="37" rx="10" fill="${col}" stroke="#fff" stroke-width="3"/>`
+                    : `<circle cx="20" cy="20" r="18.5" fill="${col}" stroke="#fff" stroke-width="3"/>`;
+  return `<svg class="ic" viewBox="0 0 40 40" aria-hidden="true">${bg}<g transform="translate(9 9) scale(.9166)"><path fill="${col === "#ffd60a" ? "#222" : "#fff"}" fill-rule="evenodd" d="${PATHS[path] || ""}"/></g></svg>`;
+}
+const wxName = w => tr("W_t" + w.type) !== "W_t" + w.type ? tr("W_t" + w.type) : tr("L_wx");
+const wxHead = w => (w.head && (w.head[lang] || w.head.en || w.head.nl)) || "";
+function wxWhen(w) {
+  const now = Date.now(), day = ms => new Date(ms).toLocaleDateString(locale(), { weekday: "short" }) + " ";
+  const f = ms => (new Date(ms).toDateString() === new Date().toDateString() ? "" : day(ms)) + hhmm(ms);
+  return w.start > now ? tr("W_from", f(w.start)) + " · " + tr("W_until", f(w.end)) : tr("W_until", f(w.end));
+}
+const heliSub = h => [h.cs || h.reg, h.type, h.alt != null ? h.alt + " m" : "", h.kmh != null ? h.kmh + " " + tr("km_h") : ""].filter(Boolean).join(" · ");
+const sondeSub = s => [s.type, s.alt + " m", s.vz > 0.5 ? tr("S_up", s.vz) : s.vz < -0.5 ? tr("S_down", -s.vz) : "", s.mhz ? s.mhz + " MHz" : ""].filter(Boolean).join(" · ");
+
+function renderSky() {
+  wxLayer.clearLayers(); skyLayer.clearLayers();
+  if (!map.hasLayer(wxLayer)) wxLayer.addTo(map);
+  if (!map.hasLayer(skyLayer)) skyLayer.addTo(map);
+  const wx = layersOn.wx ? skyData.wx : [], helis = layersOn.sky ? skyData.helis : [], sondes = layersOn.sondes ? skyData.sondes : [];
+  wx.slice().sort((a, b) => a.level - b.level).forEach(w => {
+    const col = WXCOL[w.level] || "#ffd60a";
+    const pop = `<div class="pop">${svgIc(col, "6", true)}<div><div class="t">${tr("W_lvl" + w.level)} · ${esc(wxName(w))}</div>
+      <div class="p">${esc(w.area)}</div><div class="s">${esc(wxHead(w))}</div><div class="s">${wxWhen(w)}</div><div class="s">${tr("src_wx")}</div></div></div>`;
+    L.polygon(w.rings, { interactive: false, color: col, weight: 1, opacity: .75, fillColor: col, fillOpacity: w.start > Date.now() ? .05 : .11, dashArray: w.start > Date.now() ? "4 4" : null })
+      .addTo(wxLayer);
+  });
+  helis.forEach(h => {
+    const k = HELI[h.kind] || HELI.helikopter;
+    const rot = h.trk != null ? `<span style="position:absolute;left:50%;top:50%;width:0;height:0;transform:rotate(${h.trk}deg)"><i style="position:absolute;left:-4px;top:-27px;border:4px solid transparent;border-bottom:7px solid ${k.col}"></i></span>` : "";
+    L.marker([h.lat, h.lon], { zIndexOffset: 600, icon: L.divIcon({ className: "", iconSize: [34, 34], iconAnchor: [17, 17], popupAnchor: [0, -16],
+      html: `<div class="pin" style="--col:${k.col};width:34px;height:34px;position:relative">${svgIc(k.col, "heli")}${rot}</div>` }) })
+      .bindPopup(`<div class="pop">${svgIc(k.col, "heli")}<div><div class="t">${tr(k.key)}</div><div class="p">${esc(heliSub(h))}</div>
+        ${h.reg && h.cs ? `<div class="s">${esc(h.reg)}</div>` : ""}<div class="s">${tr("src_adsb")}</div></div></div>`).addTo(skyLayer);
+  });
+  sondes.forEach(s => {
+    const pop = `<div class="pop">${svgIc("#bf5af2", "sonde")}<div><div class="t">${tr("S_sonde")} ${esc(s.id)}</div><div class="p">${esc(sondeSub(s))}</div>
+      <div class="s">${ago(s.time)}</div>${s.land ? `<div class="s">${tr("S_land")}</div>` : ""}<div class="s">${tr("src_sonde")}</div></div></div>`;
+    L.marker([s.lat, s.lon], { zIndexOffset: 550, icon: L.divIcon({ className: "", iconSize: [30, 30], iconAnchor: [15, 15], popupAnchor: [0, -14],
+      html: `<div class="pin" style="--col:#bf5af2;width:30px;height:30px">${svgIc("#bf5af2", "sonde")}</div>` }) }).bindPopup(pop).addTo(skyLayer);
+    if (s.land) {
+      L.polyline([[s.lat, s.lon], s.land], { color: "#bf5af2", weight: 2, dashArray: "5 6", opacity: .8 }).addTo(skyLayer);
+      L.marker(s.land, { icon: L.divIcon({ className: "", iconSize: [16, 16], iconAnchor: [8, 8],
+        html: `<svg viewBox="0 0 16 16" width="16" height="16"><path d="M3 3l10 10M13 3L3 13" stroke="#bf5af2" stroke-width="3" stroke-linecap="round"/></svg>` }) }).bindPopup(pop).addTo(skyLayer);
+    }
+  });
+
+  const el = $("slist");
+  const rows = [
+    ...Object.values(wx.reduce((g, w) => { const k = [w.cc, w.level, w.type, w.start, w.end].join("|");
+        (g[k] = g[k] || []).push(w); return g; }, {}))
+      .sort((a, b) => b[0].level - a[0].level || a[0].start - b[0].start).map(ws => { const w = ws[0];
+        const b = ws.flatMap(x => x.rings.flat()), la = b.map(p => p[0]), lo = b.map(p => p[1]);
+        return { ic: svgIc(WXCOL[w.level], "6", true), t: tr("W_lvl" + w.level) + " · " + wxName(w),
+          p: ws.map(x => x.area).join(", "), s: wxWhen(w), src: w.cc === "NL" ? "KNMI" : "MeteoLux",
+          bounds: [[Math.min(...la), Math.min(...lo)], [Math.max(...la), Math.max(...lo)]] }; }),
+    ...helis.slice().sort((a, b) => HELI_ORDER[a.kind] - HELI_ORDER[b.kind]).map(h => { const k = HELI[h.kind] || HELI.helikopter;
+      return { ic: svgIc(k.col, "heli"), t: tr(k.key), p: heliSub(h), s: "", src: "ADS-B", ll: [h.lat, h.lon], z: 11 }; }),
+    ...sondes.map(s => ({ ic: svgIc("#bf5af2", "sonde"), t: tr("S_sonde"), p: sondeSub(s), s: ago(s.time), src: "SondeHub", ll: [s.lat, s.lon], z: 9 })),
+  ];
+  $("sInfo").textContent = rows.length ? rows.length : "";
+  if (!rows.length) { el.innerHTML = `<div class="empty">${tr("e_sky")}</div>`; return; }
+  el.replaceChildren(...rows.slice(0, 30).map(r => {
+    const b = document.createElement("button");
+    b.className = "item";
+    b.innerHTML = `${r.ic}<div class="mid"><div class="t">${esc(r.t)}</div><div class="p">${esc(r.p)}</div>${r.s ? `<div class="s">${esc(r.s)}</div>` : ""}</div><span class="src">${r.src}</span>`;
+    b.onclick = () => { r.bounds ? map.flyToBounds(r.bounds, { duration: .8, padding: [30, 30] }) : map.flyTo(r.ll, r.z, { duration: .8 });
+      if (narrow()) $("panel").classList.add("small"); };
+    return b;
+  }));
+}
+async function loadSky() {
+  try {
+    const [a, b] = await Promise.all([fetch("/v1/sky", { cache: "no-store" }), fetch("/v1/weather", { cache: "no-store" })]);
+    if (a.ok) { const j = await a.json(); skyData.helis = j.helis || []; skyData.sondes = j.sondes || []; }
+    if (b.ok) skyData.wx = (await b.json()).items || [];
+    renderSky(); renderLayers();
+  } catch (e) {}
+}
+const RAIL = [
+  { k: "traffic", keys: ["community", "official"], path: "3", col: "#ff7a00", n: () => data.reports.length + official.items.filter(o => o.cat === "urgent").length },
+  { k: "works", keys: ["works", "info"], path: "5", col: "#ffb020", n: () => official.items.filter(o => o.cat !== "urgent").length },
+  { k: "cams", keys: ["cams"], path: "camF", col: "#ff3b30" },
+  { k: "wx", keys: ["wx"], path: "6", col: "#ff9f0a", dark: true, n: () => skyData.wx.length },
+  { k: "radar", keys: ["radar"], path: "10", col: "#0a84ff" },
+  { k: "sky", keys: ["sky"], path: "heli", col: "#ff2d55", n: () => skyData.helis.length },
+  { k: "sondes", keys: ["sondes"], path: "sonde", col: "#bf5af2", n: () => skyData.sondes.length },
+];
+function renderRail() {
+  $("rail").replaceChildren(...RAIL.flatMap(r => {
+    const on = r.keys.some(k => layersOn[k]);
+    const b = document.createElement("button");
+    b.className = (on ? "on" : "") + (r.dark ? " dark" : "");
+    b.style.setProperty("--rc", r.col);
+    b.setAttribute("aria-pressed", String(on));
+    const n = r.n ? r.n() : 0;
+    b.innerHTML = `<svg viewBox="0 0 24 24" aria-hidden="true"><path fill-rule="evenodd" d="${PATHS[r.path]}"/></svg><span>${esc(tr("R_" + r.k))}</span>${on && n ? `<i class="cnt">${n > 99 ? "99+" : n}</i>` : ""}`;
+    b.onclick = () => {
+      const v = !on;
+      r.keys.forEach(k => layersOn[k] = v);
+      localStorage.setItem("rp-layers2", JSON.stringify(layersOn));
+      if (r.k === "cams") renderCams();
+      if (r.k === "radar") loadRadar();
+      if (["sky", "wx", "sondes"].includes(r.k)) renderSky();
+      render(); renderLayers();
+    };
+    return r.k === "wx" ? [Object.assign(document.createElement("i"), { className: "sep" }), b] : [b];
+  }));
+}
+
+$("listBtn").onclick = () => {
+  if (narrow()) { $("panel").classList.toggle("small"); return; }
+  const closed = $("panel").classList.toggle("closed");
+  localStorage.setItem("rp-panel", closed ? "closed" : "open");
+};
+if (localStorage.getItem("rp-panel") === "closed") $("panel").classList.add("closed");
+if (narrow()) $("panel").classList.add("small");
+
+let qTimer = 0, qSeq = 0, qItems = [], qSel = -1;
+function goTo(it) {
+  $("results").classList.remove("open");
+  $("q").blur();
+  const z = /plaats|woonplaats|gemeente|city|town/.test(it.type || "") ? 12 : 15;
+  map.flyTo([it.lat, it.lon], z, { duration: 1 });
+  if (narrow()) $("panel").classList.add("small");
+}
+function showResults() {
+  const el = $("results");
+  if (!qItems.length) { el.classList.remove("open"); return; }
+  el.replaceChildren(...qItems.map((it, i) => {
+    const b = document.createElement("button");
+    if (i === qSel) b.className = "sel";
+    b.innerHTML = `<b>${esc(it.name)}</b><span>${esc(it.sub || it.type || "")}${it.cc && it.cc !== "NL" ? " · " + esc(it.cc) : ""}</span>`;
+    b.onclick = () => goTo(it);
+    return b;
+  }));
+  el.classList.add("open");
+}
+$("q").addEventListener("input", () => {
+  clearTimeout(qTimer);
+  const q = $("q").value.trim();
+  if (q.length < 2) { qItems = []; showResults(); return; }
+  qTimer = setTimeout(async () => {
+    const my = ++qSeq, c = map.getCenter();
+    try {
+      const r = await fetch(`/v1/geocode?q=${encodeURIComponent(q)}&lat=${c.lat.toFixed(1)}&lon=${c.lng.toFixed(1)}`);
+      if (!r.ok || my !== qSeq) return;
+      qItems = ((await r.json()).items || []).slice(0, 8); qSel = -1; showResults();
+    } catch (e) {}
+  }, 300);
+});
+$("q").addEventListener("keydown", e => {
+  if (e.key === "ArrowDown" || e.key === "ArrowUp") { qSel = Math.max(0, Math.min(qItems.length - 1, qSel + (e.key === "ArrowDown" ? 1 : -1))); showResults(); e.preventDefault(); }
+  else if (e.key === "Enter" && qItems.length) goTo(qItems[Math.max(0, qSel)]);
+  else if (e.key === "Escape") { $("results").classList.remove("open"); $("q").blur(); }
+});
+document.addEventListener("click", e => { if (!$("results").contains(e.target) && e.target !== $("q")) $("results").classList.remove("open"); });
+
+let radarFrames = [], radarLayers = [], radarIdx = 0, radarPlay = 0, radarHost = "";
+function radarPane() {
+  if (!map.getPane("radar")) { const p = map.createPane("radar"); p.style.zIndex = 250; p.style.pointerEvents = "none"; }
+  return "radar";
+}
+function showFrame(i) {
+  radarIdx = i;
+  radarLayers.forEach((l, j) => l.setOpacity(j === i ? .65 : 0));
+  const f = radarFrames[i];
+  if (!f) return;
+  radarTime = f.time * 1000;
+  $("tslider").value = i;
+  const fut = f.time * 1000 > Date.now() + 60000;
+  $("ttime").innerHTML = `${hhmm(f.time * 1000)}<small>${tr(fut ? "T_fc" : i === radarFrames.length - 1 || !radarFrames.slice(i + 1).some(x => !x.fc) ? "T_now" : "T_past")}</small>`;
+}
+function stopPlay() { clearInterval(radarPlay); radarPlay = 0; $("playIc").innerHTML = '<path d="M8 5v14l11-7z" fill="currentColor" stroke="none"/>'; }
+$("play").onclick = () => {
+  if (radarPlay) { stopPlay(); return; }
+  $("playIc").innerHTML = '<path d="M7 5h3.5v14H7zM13.5 5H17v14h-3.5z" fill="currentColor" stroke="none"/>';
+  radarPlay = setInterval(() => showFrame((radarIdx + 1) % radarFrames.length), 600);
+};
+$("tslider").oninput = e => { stopPlay(); showFrame(+e.target.value); };
+async function loadRadar() {
+  if (!layersOn.radar) {
+    stopPlay(); radarLayers.forEach(l => map.removeLayer(l)); radarLayers = []; radarFrames = []; radarTime = 0;
+    $("timeline").classList.remove("open"); renderLayers(); return;
+  }
+  try {
+    const j = await (await fetch("https://api.rainviewer.com/public/weather-maps.json", { cache: "no-store" })).json();
+    const frames = [...((j.radar && j.radar.past) || []), ...((j.radar && j.radar.nowcast) || []).map(f => ({ ...f, fc: true }))];
+    if (!frames.length) return;
+    if (!layersOn.radar) return;
+    const playing = !!radarPlay; stopPlay();
+    radarLayers.forEach(l => map.removeLayer(l));
+    radarHost = j.host; radarFrames = frames;
+    radarLayers = frames.map(f => L.tileLayer(`${j.host}${f.path}/256/{z}/{x}/{y}/2/1_1.png`,
+      { opacity: 0, maxNativeZoom: 7, maxZoom: 19, pane: radarPane(), attribution: '<a href="https://www.rainviewer.com/">RainViewer</a>' }).addTo(map));
+    $("tslider").max = frames.length - 1;
+    const nowIdx = frames.map(f => !f.fc).lastIndexOf(true);
+    showFrame(nowIdx >= 0 ? nowIdx : frames.length - 1);
+    $("timeline").classList.add("open");
+    if (playing) $("play").onclick();
+    renderLayers();
+  } catch (e) {}
+}
+
+let lastPopup = 0;
+map.on("popupopen", () => { lastPopup = Date.now(); });
+const dkm = (a, b, c, d) => { const x = (d - b) * Math.cos((a + c) * Math.PI / 360), y = c - a; return Math.sqrt(x * x + y * y) * 111.2; };
+function inRing(lat, lon, ring) {
+  let ins = false;
+  for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+    const [yi, xi] = ring[i], [yj, xj] = ring[j];
+    if ((yi > lat) !== (yj > lat) && lon < (xj - xi) * (lat - yi) / ((yj - yi) || 1e-12) + xi) ins = !ins;
+  }
+  return ins;
+}
+map.on("click", e => {
+  setTimeout(() => {
+    if (Date.now() - lastPopup < 150) return;
+    const { lat, lng: lon } = e.latlng, rows = [];
+    const row = (ic, t, s) => rows.push(`<div class="row">${ic}<div><b>${esc(t)}</b>${s ? `<div class="none">${esc(s)}</div>` : ""}</div></div>`);
+    skyData.wx.filter(w => w.start <= Date.now() && w.rings.some(r => inRing(lat, lon, r)))
+      .forEach(w => row(svgIc(WXCOL[w.level], "6", true), tr("W_lvl" + w.level) + " · " + wxName(w), wxWhen(w)));
+    const near = [...data.reports.map(m => ({ t: TYPES[m.type], ty: m.type, lat: m.lat, lon: m.lon })),
+                  ...official.items.map(o => ({ t: TYPES[o.type], ty: o.type, lat: o.lat, lon: o.lon, lbl: trL(o.label) }))]
+      .map(x => ({ ...x, d: dkm(lat, lon, x.lat, x.lon) })).filter(x => x.d < 3).sort((a, b) => a.d - b.d);
+    near.slice(0, 3).forEach(x => row(icon(x.ty), x.lbl || (x.t && x.t.label) || "", tr("T_dist", x.d < 1 ? Math.round(x.d * 1000) + " m" : x.d.toFixed(1) + " km")));
+    if (near.length > 3) rows.push(`<div class="none">${esc(tr("T_more", near.length - 3))}</div>`);
+    let cam = null;
+    camData.forEach(c => { const d = dkm(lat, lon, c[1], c[2]); if (d < 5 && (!cam || d < cam.d)) cam = { c, d }; });
+    if (cam) row(camIcon(cam.c[3]), CAM[cam.c[3]].label + (cam.c[4] ? " · " + cam.c[4] + " " + tr("km_h") : ""),
+      tr("T_dist", cam.d < 1 ? Math.round(cam.d * 1000) + " m" : cam.d.toFixed(1) + " km"));
+    skyData.helis.filter(h => dkm(lat, lon, h.lat, h.lon) < 15).slice(0, 2)
+      .forEach(h => row(svgIc((HELI[h.kind] || HELI.helikopter).col, "heli"), tr((HELI[h.kind] || HELI.helikopter).key), heliSub(h)));
+    const html = `<div class="here"><h4>${tr("T_here")}</h4>${rows.length ? rows.join("") : `<div class="none">${tr("T_quiet")}</div>`}</div>`;
+    L.popup({ maxWidth: 280 }).setLatLng(e.latlng).setContent(html).openOn(map);
+  }, 40);
+});
+function camIcon(k) {
+  const t = CAM[k];
+  return `<svg class="ic" viewBox="0 0 40 40" aria-hidden="true"><circle cx="20" cy="20" r="18.5" fill="${t.col}" stroke="#fff" stroke-width="3"/>
+    <g transform="translate(9 9) scale(.9166)"><path fill="#fff" fill-rule="evenodd" d="${PATHS[t.path] || ""}"/></g></svg>`;
+}
+function renderCams() {
+  clayer.clearLayers();
+  const z = map.getZoom();
+  const r = z < 9 ? 2.2 : z < 11 ? 3.5 : z < 13 ? 5.5 : 7.5;
+  if (z < 9) return;
+  camData.forEach(c => {
+    const k = c[3];
+    if (k === "N" ? !layersOn.anpr : !layersOn.cams) return;
+    const t = CAM[k];
+    const m = L.circleMarker([c[1], c[2]], { radius: r, color: "#fff", weight: z < 11 ? 1 : 2, fillColor: t.col, fillOpacity: .95 });
+    m.bindPopup(() => `<div class="pop">${camIcon(k)}<div><div class="t">${t.label}${c[4] ? " · " + c[4] + " " + tr("km_h") : ""}</div>
+      <div class="s">${k === "N" ? tr("cam_nospeed") : tr("cam_fixed")}</div><div class="s">${String(c[0]).startsWith("es-") ? tr("src_off", "DGT") : tr("src_osm")}</div></div></div>`);
+    m.addTo(clayer);
+  });
+}
+map.on("zoomend", () => camData.length && renderCams());
+async function loadCams() {
+  try {
+    const r = await fetch("/v1/cameras");
+    if (r.ok) { camData = (await r.json()).items || []; renderCams(); renderLayers(); }
+  } catch (e) {}
+}
+function renderLayers() {
+  const n = c => official.items.filter(o => o.cat === c).length;
+  const nc = k => camData.filter(c => k ? c[3] === "N" : c[3] !== "N").length;
+  const defs = [["community", data.reports.length], ["wx", skyData.wx.length],
+                ["radar", radarTime ? hhmm(radarTime) : "–"], ["sky", skyData.helis.length], ["sondes", skyData.sondes.length], ["cams", nc(false)],
+                ["anpr", nc(true)], ["official", n("urgent")], ["works", n("works")], ["info", n("info")]]
+    .map(([k, c]) => [k, tr("L_" + k), c]);
+  const LCOL = { community: "#ff7a00", wx: "#ff9f0a", radar: "#0a84ff", sky: "#ff2d55", sondes: "#bf5af2", cams: "#ff3b30", anpr: "#8e8e93", official: "#ff4a3d", works: "#ffb020", info: "#35a8e0" };
+  renderRail();
+  $("layers").replaceChildren(...defs.map(([k, label, cnt]) => {
+    const el = document.createElement("button");
+    el.className = "layer" + (layersOn[k] ? " on" : "");
+    el.setAttribute("aria-pressed", String(!!layersOn[k]));
+    el.innerHTML = `<span class="ld" style="background:${LCOL[k]}"></span><span>${esc(label)}</span><span class="c">${cnt}</span><i class="sw"></i>`;
+    el.onclick = () => {
+      layersOn[k] = !layersOn[k]; localStorage.setItem("rp-layers2", JSON.stringify(layersOn));
+      if (k === "cams" || k === "anpr") renderCams();
+      if (k === "radar") loadRadar();
+      if (["sky", "wx", "sondes"].includes(k)) renderSky();
+      render();
+    };
+    return el;
+  }));
+}
+
+function renderStats(s) {
+  countTo($("tConfirmed"), s.confirmed_today); countTo($("tReports"), s.reports_today);
+  countTo($("tVotes"), s.votes_today); countTo($("tDrivers"), s.drivers_today);
+  const max = Math.max(1, ...s.hourly);
+  $("spark").replaceChildren(...s.hourly.map((n, i) => {
+    const el = document.createElement("i");
+    if (n) el.className = "on";
+    el.style.height = Math.max(4, n / max * 100) + "%";
+    const h = new Date(s.hour0 + i * 3600000).getHours();
+    el.title = tr("spark_tip", String(h).padStart(2, "0"), n);
+    return el;
+  }));
+  $("ax0").textContent = String(new Date(s.hour0).getHours()).padStart(2, "0") + ":00";
+}
+
+let last = 0, oknownNext = null, lastOk = 0, needed = 3, statsData = null;
+function officialUrl() {
+  const b = map.getBounds().pad(0.15);
+  const f = x => x.toFixed(3);
+  return `/v1/official?bbox=${f(b.getSouth())},${f(b.getWest())},${f(b.getNorth())},${f(b.getEast())}&z=${Math.floor(map.getZoom())}`;
+}
+let moveTimer = 0;
+map.on("moveend", () => {
+  clearTimeout(moveTimer);
+  moveTimer = setTimeout(async () => {
+    try {
+      const r = await fetch(officialUrl(), { cache: "no-store" });
+      if (!r.ok) return;
+      official = await r.json();
+      oknown = new Set([...(oknown || []), ...official.items.map(x => x.id)]);
+      render();
+    } catch (e) {}
+  }, 350);
+});
+async function load() {
+  try {
+    const [r, s, o] = await Promise.all([
+      fetch("/v1/live?lat=52.2&lon=5.3&radius_km=250", { cache: "no-store" }),
+      fetch("/v1/stats", { cache: "no-store" }),
+      fetch(officialUrl(), { cache: "no-store" }).catch(() => null),
+    ]);
+    if (o && o.ok) {
+      official = await o.json();
+      const oids = new Set(official.items.map(x => x.id));
+      if (oknown && layersOn.official) official.items
+        .filter(x => !oknown.has(x.id) && [12, 4, 3].includes(x.type) && !hidden.has(x.type)).slice(0, 2)
+        .forEach(x => toast({ type: x.type, label: x.label, place: x.place, lat: x.lat, lon: x.lon, id: null, official: true }));
+      oknownNext = new Set([...(oknown || []), ...oids]);
+    }
+    if (!r.ok) throw new Error(r.status);
+    data = await r.json();
+    const ids = new Set(data.reports.map(m => m.id));
+    if (known) data.reports.filter(m => !known.has(m.id) && !hidden.has(m.type)).slice(0, 3).forEach(toast);
+    render();
+    known = ids;
+    if (oknownNext) oknown = oknownNext;
+    if (s.ok) renderStats(statsData = await s.json());
+    $("dot").classList.remove("off");
+    lastOk = Date.now();
+    $("status").textContent = tr("live") + " · " + hhmm(lastOk);
+  } catch (e) {
+    $("dot").classList.add("off");
+    lastOk = 0;
+    $("status").textContent = tr("no_conn");
+  }
+  last = Date.now();
+}
+(function tick() {
+  $("bar").style.width = (Math.min(1, (Date.now() - last) / REFRESH) * 100).toFixed(1) + "%";
+  requestAnimationFrame(tick);
+})();
+load();
+loadCams();
+setInterval(load, REFRESH);
+loadSky(); loadRadar();
+setInterval(loadSky, 15000);
+setInterval(() => layersOn.radar && loadRadar(), 5 * 60000);
+setInterval(() => data.reports.length && render(), 60000);
+document.addEventListener("visibilitychange", () => { if (!document.hidden && Date.now() - last > 5000) load(); });
+
+const closeAll = () => document.querySelectorAll(".modal.open").forEach(m => {
+  m.classList.remove("open");
+  m.querySelectorAll("video").forEach(v => v.pause());
+});
+document.querySelectorAll(".modal").forEach(m => {
+  m.onclick = e => { if (e.target === m || e.target.hasAttribute("data-close")) closeAll(); };
+});
+addEventListener("keydown", e => { if (e.key === "Escape") { closeAll(); $("langMenu").classList.remove("open"); } });
+$("infoBtn").onclick = () => $("about").classList.add("open");
+
+const APP_DEVS = ["app_round", "app_phone"];
+const APP_MODES = ["app_mdash", "app_mmap", "app_mnav", "app_mcar"];
+const APP_FILES = [["dash", "map", "navdash", "cardash"], ["phone", "phonemap", "navphone", "carphone"]];
+const FEATS = [
+  ["f_cams", '<circle cx="12" cy="9" r="5"/><circle cx="12" cy="9" r="2"/><path d="M12 14v7M8 21h8"/>'],
+  ["f_rep", '<path d="M12 3l9 16H3z"/><path d="M12 10v4M12 17h.01"/>'],
+  ["f_nav", '<path d="M12 2l7 19-7-4-7 4z"/>'],
+  ["f_live", '<path d="M3 12h4l3-8 4 16 3-8h4"/>'],
+  ["f_map", '<path d="M9 4L3 6v14l6-2 6 2 6-2V4l-6 2z"/><path d="M9 4v14M15 6v14"/>'],
+  ["f_dash", '<circle cx="9" cy="12" r="7"/><rect x="16" y="6" width="6" height="12" rx="1.5"/>'],
+  ["f_data", '<path d="M5 12.5a10 10 0 0 1 14 0M8.5 16a5 5 0 0 1 7 0"/><circle cx="12" cy="19.5" r="1"/>'],
+  ["f_priv", '<rect x="5" y="10" width="14" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/>'],
+];
+function renderFeats() {
+  $("feats").innerHTML = FEATS.map(([k, ic]) =>
+    `<div class="feat"><div class="fi"><svg viewBox="0 0 24 24">${ic}</svg></div><div><b>${tr(k)}</b><span>${tr(k + "_d").replace("{n}", needed)}</span></div></div>`).join("");
+}
+let appDev = 0, appMode = 0;
+function pills(keys, cur, set) {
+  return keys.map((k, i) => {
+    const b = document.createElement("button");
+    b.textContent = tr(k);
+    b.className = i === cur ? "on" : "";
+    b.onclick = () => { set(i); renderApp(); };
+    return b;
+  });
+}
+function renderApp() {
+  renderFeats();
+  $("appTabs").replaceChildren(...pills(APP_DEVS, appDev, i => appDev = i));
+  $("appModes").replaceChildren(...pills(APP_MODES, appMode, i => appMode = i));
+  const f = APP_FILES[appDev][appMode];
+  $("appStage").innerHTML = `<div class="dev-${appDev ? "phone" : "round"}"><video src="/static/media/${f}.mp4?v=7" poster="/static/media/${f}.jpg?v=7" autoplay muted loop playsinline preload="metadata"></video></div>`;
+  $("appCap").textContent = tr("cap_" + f);
+}
+$("appBtn").onclick = () => { renderApp(); $("appModal").classList.add("open"); };
+
+function applyI18n() {
+  document.documentElement.lang = lang;
+  document.title = tr("title_page");
+  document.querySelectorAll("[data-i18n]").forEach(e => e.textContent = tr(e.dataset.i18n));
+  document.querySelectorAll("[data-i18n-html]").forEach(e => e.innerHTML = tr(e.dataset.i18nHtml).replace("{n}", needed));
+  document.querySelectorAll("[data-i18n-ph]").forEach(e => e.placeholder = tr(e.dataset.i18nPh));
+  document.querySelectorAll("[data-i18n-title]").forEach(e => { e.title = tr(e.dataset.i18nTitle); e.setAttribute("aria-label", e.title); });
+  $("foot").innerHTML = tr("foot").replace("{osm}", '<a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>');
+  $("langCode").textContent = lang.toUpperCase();
+  $("langMenu").replaceChildren(...LANGS.map((l, i) => {
+    const b = document.createElement("button");
+    b.textContent = LANG_NAMES[i];
+    b.className = l === lang ? "on" : "";
+    b.onclick = () => { lang = l; localStorage.setItem("rp-lang", l); $("langMenu").classList.remove("open"); relabel(); };
+    return b;
+  }));
+  if (lastOk) $("status").textContent = tr("live") + " · " + hhmm(lastOk);
+}
+function relabel() {
+  applyI18n();
+  glLabels(true);
+  render();
+  renderSky();
+  renderStats(statsData || { confirmed_today: 0, reports_today: 0, votes_today: 0, drivers_today: 0, hourly: [], hour0: Date.now() });
+  if ($("appModal").classList.contains("open")) renderApp();
+  map.closePopup();
+}
+$("langBtn").onclick = e => { e.stopPropagation(); $("langMenu").classList.toggle("open"); };
+document.addEventListener("click", e => { if (!$("langMenu").contains(e.target)) $("langMenu").classList.remove("open"); });
+let tab = localStorage.getItem("rp-tab") || "live";
+function showTab(t) {
+  tab = t; localStorage.setItem("rp-tab", t);
+  document.querySelectorAll(".seg button").forEach(b => b.classList.toggle("on", b.dataset.tab === t));
+  document.querySelectorAll("[data-pane]").forEach(p => p.hidden = p.dataset.pane !== t);
+}
+document.querySelectorAll(".seg button").forEach(b => b.onclick = () => { showTab(b.dataset.tab); if (narrow()) $("panel").classList.remove("small"); });
+showTab(["live", "map", "stats"].includes(tab) ? tab : "live");
+applyI18n();
+$("grab").onclick = () => $("panel").classList.toggle("small");
+</script>
+</body>
+</html>

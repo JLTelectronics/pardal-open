@@ -1,0 +1,5 @@
+(fp_lib_table
+  (version 7)
+  (lib (name "Pardal")(type "KiCad")(uri "${KIPRJMOD}/libs/Pardal.pretty")(options "")(descr "Eigen footprints Pardal Dash"))
+  (lib (name "lcsc")(type "KiCad")(uri "${KIPRJMOD}/libs/lcsc.pretty")(options "")(descr "Uit LCSC/EasyEDA (easyeda2kicad)"))
+)

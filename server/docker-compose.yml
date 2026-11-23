@@ -27,7 +27,7 @@ services:
     security_opt: ["no-new-privileges:true"]
     mem_limit: 6g
     environment:
-      tile_urls: "https://download.geofabrik.de/europe/netherlands-latest.osm.pbf"
+      tile_urls: "https://download.geofabrik.de/europe/netherlands-latest.osm.pbf https://download.geofabrik.de/europe/belgium-latest.osm.pbf https://download.geofabrik.de/europe/france-latest.osm.pbf https://download.geofabrik.de/europe/spain-latest.osm.pbf https://download.geofabrik.de/europe/portugal-latest.osm.pbf"
       use_tiles_ignore_pbf: "True"
       force_rebuild: "False"
       build_elevation: "False"

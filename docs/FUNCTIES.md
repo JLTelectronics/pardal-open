@@ -150,6 +150,17 @@ services do not see the user's IP) and `POST /v1/route` (a custom
 [Valhalla](https://github.com/valhalla/valhalla) container `roadping-valhalla`, reachable only
 internally). The routing engine runs on the self-hostable server.
 
+## In the car: CarPlay and Android Auto
+
+iPhone: CarPlay (navigation app). Android (from 2.9.0): Android Auto through the Car App
+Library, navigation category. The car display shows the same Pardal map as the phone, with
+cameras and alerts in the map, the warning at the top, speed and limit bottom left. The car
+itself draws the turn card, arrival time and the buttons: **Search** (typing only while
+parked; recent destinations), **Report** (the same types as the REPORT screen), sound on/off
+and zoom. Stop navigating with the cross in the arrival card. The next turn is also sent to
+the instrument cluster when the car supports it. Spoken warnings play through the phone
+(also while another app is on screen).
+
 ## Data sources
 - Speed cameras and maxspeed: © OpenStreetMap contributors, ODbL — via the public
   Overpass API. Default endpoint: `https://overpass-api.de/api/interpreter`

@@ -10,6 +10,7 @@
 [![License](https://img.shields.io/badge/license-GPLv3_%C2%B7_AGPLv3_%C2%B7_CERN--OHL--S-FF7A1A?style=for-the-badge)](#independence-trademarks--licence)
 
 ![CarPlay](https://img.shields.io/badge/CarPlay-supported-111?logo=apple&logoColor=white)
+![Android Auto](https://img.shields.io/badge/Android_Auto-supported-111?logo=androidauto&logoColor=white)
 ![Platform](https://img.shields.io/badge/iOS_·_Android_(soon)-111)
 ![Open data](https://img.shields.io/badge/RWS_·_NDW_·_KNMI_·_OSM-2DA44E)
 
@@ -74,7 +75,7 @@ Full description: **[docs/FUNCTIES.md](docs/FUNCTIES.md)**.
 | Platform | Status | |
 |---|---|---|
 | **iPhone** | ✅ Available, including **CarPlay** | [**Download on the App Store →**](https://apps.apple.com/nl/app/pardal/id6836411492) |
-| **Android** | 🚧 On the way | Coming to Google Play |
+| **Android** | 🚧 On the way, including **Android Auto** | Coming to Google Play |
 | **Dedicated car display** | 🚧 Open hardware in development | See [`hardware/`](hardware) and [the end of this page](#running-pardal-on-a-dash01) |
 
 > The Pardal **apps** (iOS, Android) are proprietary and not part of this repository. This repository

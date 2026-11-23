@@ -53,6 +53,12 @@ setsid sh -c '
   chroot $C /system/bin/sh -c "set -a; . /data/local/tmp/ssenv; set +a; /system/bin/settings put global device_provisioned 1; /system/bin/settings put secure user_setup_complete 1; /system/bin/settings put global device_name Pardal-Dash; /system/bin/settings put secure bluetooth_name Pardal-Dash; /system/bin/cmd bluetooth_manager enable; /system/bin/settings put global bluetooth_on 1; /system/bin/pm install -r -g -t /data/local/tmp/pardal.apk; /system/bin/am start -n com.pardal.app.dash/com.pardal.app.MainActivity" >> /tmp/pardal.log 2>&1
   echo "POST-BOOT klaar" >> /tmp/pardal.log
 ' </dev/null >/dev/null 2>&1 &
+setsid sh -c '
+  i=0; while [ "$(chroot /droid /system/bin/getprop sys.boot_completed 2>/dev/null)" != "1" ] && [ $i -lt 180 ]; do sleep 2; i=$((i+1)); done
+  sleep 10
+  P=$(ps | grep "[s]ystem_server" | awk "{print \$1}" | head -1)
+  [ -n "$P" ] && nsenter -t $P -m -p -r -w /system/bin/sh -c "PATH=/system/bin cmd lock_settings set-disabled true" >> /tmp/pardal.log 2>&1
+' </dev/null >/dev/null 2>&1 &
 sleep 20
 chroot $C /system/bin/logcat -t 400 > /tmp/lc.txt 2>&1
 { echo "LIBPATCH=$(grep -c LIBPATCH /tmp/droid.out)"

@@ -312,6 +312,20 @@ def cmd_install(a):
         alles = False
     persist = os.path.join(PROJ, "container", "herstel", "persist.sh")
     (ok if os.path.isfile(persist) else fout)("autostart-bouwer: container/herstel/persist.sh")
+    herstel = os.path.join(PROJ, "container", "herstel")
+    nodig = ["km_clean.so", "i2c-dev.ko", "bindsh", "wekker", "e2fsck", "recovery", "DashLauncher.apk",
+             "pardal-splash.raw", "pardal-boot.zip", "vfix/lib64/libpuresoftkeymasterdevice.so",
+             "vfix/lib64/libkeymaster4support.so"]
+    mist = [n for n in nodig if not os.path.isfile(os.path.join(herstel, n))]
+    if mist:
+        fout("ontbreekt in container/herstel: " + ", ".join(mist)); alles = False
+    else:
+        ok("hulpbestanden in container/herstel compleet (%d)" % len(nodig))
+    apk = os.environ.get("PARDAL_APK") or os.path.join(PROJ, "..", "build", "Pardal-dash.apk")
+    if os.path.isfile(apk):
+        ok("Pardal-APK: %s (%s)" % (os.path.normpath(apk), _mb(apk)))
+    else:
+        fout("Pardal-APK ontbreekt: bouw hem met ./build.sh dash of zet $PARDAL_APK"); alles = False
 
     kop("Het plan")
     print("  De unieke modem-/NV-partities en de eSIM blijven ONAANGEROERD.\n")

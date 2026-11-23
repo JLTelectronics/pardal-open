@@ -6,7 +6,7 @@ BACKUP="${1:?back-upmap ontbreekt}"
 GSI="${2:?GSI-image ontbreekt}"
 PRELOADER="${3:-}"
 
-PROJ="${DASH_PROJ:-$DASHPURE}"
+PROJ="${DASH_PROJ:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}"
 H="$PROJ/container/herstel"
 MTK="${MTKCLIENT:-$HOME/mtkclient}"
 MTKPY="$MTK/.venv/bin/python"; [ -x "$MTKPY" ] || MTKPY="$(command -v python3)"

@@ -1,6 +1,7 @@
 #!/bin/bash
 
-SP=$DASHPURE/container/herstel
+SP="${DASH_PROJ:+$DASH_PROJ/container/herstel}"; SP="${SP:-$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)}"
+PARDAL_APK="${PARDAL_APK:-$SP/../../../build/Pardal-dash.apk}"
 DEV=10.0.0.1
 net() { local i="${IFACE:-en9}"; ifconfig "$i" | grep -q "inet 10.0.0.2" || sudo -n ifconfig "$i" 10.0.0.2 netmask 255.255.255.0 up 2>/dev/null; }
 wait_net() { for t in $(seq 1 10); do net; ping -c1 -t2 $DEV >/dev/null 2>&1 && return 0; sleep 2; done; return 1; }
@@ -39,14 +40,14 @@ echo "=== 2. mappen ==="
 cmd 'mkdir -p /tmp/vlibs/lib64 /tmp/vlibs/lib; echo ok'
 
 echo "=== 3. scripts + libs pushen ==="
-push $DASHPURE/container/droid2.sh /droid2.sh
+push $SP/../droid2.sh /droid2.sh
 push $SP/go.sh /tmp/go.sh
 push $SP/km_clean.so /tmp/km_clean.so
 push $SP/vfix/lib64/libpuresoftkeymasterdevice.so /tmp/vlibs/lib64/libpuresoftkeymasterdevice.so
 push $SP/vfix/lib64/libkeymaster4support.so /tmp/vlibs/lib64/libkeymaster4support.so
 cmd 'chmod +x /droid2.sh /tmp/go.sh'
 echo "=== 3b. Pardal APK chunk-pushen ==="
-push_apk $PARDAL/build/Pardal-dash.apk /tmp/pardal.apk
+push_apk "$PARDAL_APK" /tmp/pardal.apk
 push $SP/DashLauncher.apk /tmp/dashlauncher.apk
 [ -f $SP/wifi.conf ] && push $SP/wifi.conf /tmp/dashwifi.conf
 

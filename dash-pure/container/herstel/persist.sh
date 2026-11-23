@@ -1,14 +1,15 @@
 #!/bin/bash
 
-H=$DASHPURE/container/herstel; SP=$H; DEV=10.0.0.1
+H="${DASH_PROJ:+$DASH_PROJ/container/herstel}"; H="${H:-$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)}"; SP=$H; DEV=10.0.0.1
+PARDAL_APK="${PARDAL_APK:-$H/../../../build/Pardal-dash.apk}"
 AUTO_BLK=917504
 sed -n "/^net()/,/^echo \"=== 1/p" $H/resetup.sh | sed "$ d" > /tmp/dash_fn.$$; source /tmp/dash_fn.$$; rm -f /tmp/dash_fn.$$
 W=$(mktemp -d); mkdir -p $W/tmp/vlibs
-cp $DASHPURE/container/droid2.sh $W/droid2.sh
+cp $H/../droid2.sh $W/droid2.sh
 cp $H/go.sh $H/autostart.sh $H/km_clean.so $W/tmp/
 cp $H/i2c-dev.ko $H/bindsh $H/wekker $H/e2fsck $H/recovery $H/pardal-splash.raw $H/pardal-boot.zip $W/tmp/
 cp -R $H/vfix/. $W/tmp/vlibs/
-cp $PARDAL/build/Pardal-dash.apk $W/tmp/pardal.apk
+cp "$PARDAL_APK" $W/tmp/pardal.apk
 cp $H/DashLauncher.apk $W/tmp/dashlauncher.apk
 [ -f $H/wifi.conf ] && cp $H/wifi.conf $W/tmp/dashwifi.conf
 chmod 755 $W/droid2.sh $W/tmp/go.sh $W/tmp/autostart.sh $W/tmp/recovery $W/tmp/wekker $W/tmp/bindsh $W/tmp/e2fsck

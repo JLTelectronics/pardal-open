@@ -64,6 +64,12 @@ DEFAULT = {
                      [36.9, -9.6, 42.2, -6.1], [32.3, -17.4, 33.2, -16.2], [36.8, -31.4, 39.8, -24.9],
                      [35.9, -7.6, 42.4, 3.35], [42.4, -9.4, 43.8, -1.8], [42.2, -1.8, 42.8, 0.7],
                      [38.6, 1.1, 40.1, 4.4], [27.6, -18.2, 29.5, -13.3]],
+    "update": {
+        "ios": {"min_build": 0, "min_version": "", "store": "https://apps.apple.com/app/id6836411492"},
+        "android": {"min_build": 0, "min_version": "",
+                    "store": "https://play.google.com/store/apps/details?id=com.pardal.app"},
+        "message": {},
+    },
     "messages": [],
     "texts": {},
 }
@@ -102,6 +108,9 @@ def _check(cfg):
     for a in cfg.get("report_areas", []):
         if len(a) != 4:
             raise ValueError("report_areas: [min_lat, min_lon, max_lat, max_lon]")
+    for k, u in (cfg.get("update") or {}).items():
+        if k in ("ios", "android") and not isinstance(u.get("min_build", 0), int):
+            raise ValueError("update.%s.min_build moet een geheel getal zijn" % k)
     for m in cfg.get("messages", []):
         if not m.get("id"):
             raise ValueError("bericht zonder id")
